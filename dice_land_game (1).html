@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎲 땅따먹기 대전</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    min-height: 100vh;
+    color: #222;
+    padding: 16px;
+  }
+  h1 { text-align: center; color: #fff; margin: 8px 0 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+
+  .card-box {
+    max-width: 480px; margin: 40px auto; background: #fff; border-radius: 16px;
+    padding: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .card-box h2 { margin-top: 0; text-align: center; }
+  .primary-btn {
+    width: 100%; padding: 12px; font-size: 15px; font-weight: bold;
+    background: #2a5298; color: #fff; border: none; border-radius: 10px; cursor: pointer; margin-top: 8px;
+  }
+  .primary-btn:hover { background: #1e3c72; }
+  .primary-btn:disabled { background: #ccc; cursor: not-allowed; }
+  .secondary-btn { background: #888; }
+  .secondary-btn:hover { background: #666; }
+  .link-btn { text-align: center; margin-top: 12px; }
+  .link-btn a { color: #555; cursor: pointer; font-size: 13px; text-decoration: underline; }
+
+  #loginScreen input, #onlineScreen input {
+    width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; margin-bottom: 10px;
+  }
+  #loginError { color: #c0392b; font-size: 12.5px; min-height: 16px; text-align: center; }
+  #loginScreen .notice { font-size: 11px; color: #888; margin-top: 14px; text-align: center; line-height: 1.5; }
+
+  #lobbyCoins { font-size: 16px; font-weight: bold; text-align: center; margin: 4px 0 16px; }
+  #gachaResult { text-align: center; font-size: 13.5px; min-height: 20px; margin-top: 8px; color: #14532d; font-weight: bold; }
+
+  #setupScreen.card-box, #onlineScreen.card-box { max-width: 560px; }
+  .setup-section { margin-bottom: 20px; }
+  .setup-section label.title { display: block; font-weight: bold; margin-bottom: 8px; }
+  .choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choice-btn {
+    flex: 1; min-width: 70px; padding: 10px; border: 2px solid #ccc; border-radius: 8px;
+    background: #f5f5f5; cursor: pointer; font-size: 15px; text-align: center; transition: 0.15s;
+  }
+  .choice-btn.selected { border-color: #2a5298; background: #dce8ff; font-weight: bold; }
+
+  .player-setup-card { border: 1px solid #eee; border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+  .player-setup-card input {
+    width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; margin-bottom: 8px;
+  }
+  .kit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .kit-btn {
+    position: relative; border: 2px solid #ddd; border-radius: 8px; padding: 6px 2px; text-align: center; cursor: pointer;
+    font-size: 16px; background: #fff; transition: 0.15s; line-height: 1.3;
+  }
+  .kit-btn span { font-size: 9.5px; display: block; color: #444; }
+  .kit-btn.selected { border-color: #e07b00; background: #fff3e0; }
+  .kit-btn.locked { opacity: 0.35; cursor: not-allowed; }
+  .kit-btn.locked::after { content: '🔒'; position: absolute; top: 1px; right: 3px; font-size: 9px; }
+  .kit-btn.rarity-rare { border-color: #7fa8e0; }
+  .kit-btn.rarity-epic { border-color: #8e44ad; box-shadow: 0 0 4px rgba(142,68,173,0.4); }
+  .kit-btn.rarity-legend { border-color: #e07b00; box-shadow: 0 0 5px rgba(224,123,0,0.5); }
+  .kit-btn.rarity-eternal { border-color: #c0392b; box-shadow: 0 0 7px rgba(192,57,43,0.6); animation: eternalGlow 1.6s infinite alternate; }
+  @keyframes eternalGlow { from { box-shadow: 0 0 5px rgba(192,57,43,0.5);} to { box-shadow: 0 0 12px rgba(192,57,43,0.9);} }
+
+  #gameScreen { display: none; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  #board {
+    position: relative;
+    width: min(880px, 96vw);
+    aspect-ratio: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    gap: 2px;
+    background: #14532d;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tile {
+    position: relative;
+    background: #fdfdf5;
+    border-radius: 4px;
+    font-size: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2px;
+    overflow: hidden;
+    border: 2px solid transparent;
+  }
+  .tile .tname { font-weight: bold; font-size: 8.6px; line-height: 1.1; }
+  .tile .tprice { font-size: 7.6px; color: #555; }
+  .tile .tlevel { font-size: 8.5px; margin-top: 1px; }
+  .tile.corner { font-size: 11px; font-weight: bold; }
+  .tile.group-pink { background: #ffe1f0; }
+  .tile.group-orange { background: #ffe8cc; }
+  .tile.group-yellow { background: #fff6c2; }
+  .tile.group-green { background: #dcf7dc; }
+  .tile.group-blue { background: #d9e8ff; }
+  .tile.group-purple { background: #ecdcff; }
+  .tile.type-transit { background: #e6e6e6; }
+  .tile.type-tax { background: #f8caca; }
+  .tile.type-card { background: #ead9ff; }
+  .tile.type-start { background: #fff4b8; }
+  .tile.type-jail { background: #d8d8e8; }
+  .tile.type-travel { background: #c6f0e8; }
+  .owner-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 4px; }
+  .tokens { position: absolute; top: 1px; right: 1px; display: flex; gap: 1px; flex-wrap: wrap; width: 30px; justify-content: flex-end; }
+  .token {
+    width: 13px; height: 13px; border-radius: 50%; border: 1px solid #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 8px; color: #fff;
+    text-shadow: 0 0 2px rgba(0,0,0,0.6);
+  }
+
+  #boardCenter {
+    position: absolute; inset: 20%;
+    background: rgba(255,255,255,0.92);
+    border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px; gap: 8px;
+  }
+  #boardCenter h3 { margin: 0; font-size: 16px; }
+  #diceDisplay { font-size: 42px; letter-spacing: 6px; }
+  #diceSum { font-size: 13px; color: #555; }
+  #rollBtn, #endTurnBtn {
+    padding: 10px 22px; font-size: 15px; font-weight: bold;
+    border: none; border-radius: 8px; cursor: pointer; color: #fff;
+  }
+  #rollBtn { background: #e07b00; }
+  #rollBtn:disabled { background: #ccc; cursor: not-allowed; }
+  #endTurnBtn { background: #2a5298; display: none; }
+  #turnInfo { font-size: 13px; font-weight: bold; color: #14532d; text-align: center; }
+
+  #sidePanel { width: min(320px, 92vw); display: flex; flex-direction: column; gap: 12px; }
+  .panel-box { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); }
+  .panel-box h3 { margin: 0 0 10px; font-size: 15px; }
+  .player-card {
+    display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; margin-bottom: 6px;
+    border: 2px solid transparent; background: #f7f7f7;
+  }
+  .player-card.active { border-color: #e07b00; background: #fff3e0; }
+  .player-card.bankrupt { opacity: 0.4; text-decoration: line-through; }
+  .dot { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; border: 1px solid #999; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .pinfo { font-size: 13px; line-height: 1.4; }
+  .pinfo b { font-size: 13.5px; }
+  .kit-tag { font-size: 10.5px; color: #e07b00; }
+  #logBox {
+    height: 160px; overflow-y: auto; font-size: 12.5px; background: #fafafa;
+    border-radius: 8px; padding: 8px; display: flex; flex-direction: column-reverse;
+  }
+  #logBox div { padding: 2px 0; border-bottom: 1px dashed #eee; }
+  #buildList { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+  .build-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; background: #f5f5f5; padding: 6px 8px; border-radius: 6px; }
+  .build-row button { padding: 4px 8px; border: none; border-radius: 6px; background: #14532d; color: #fff; cursor: pointer; font-size: 12px; }
+  .build-row button:disabled { background: #bbb; cursor: not-allowed; }
+
+  #modalOverlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    align-items: center; justify-content: center; z-index: 50;
+  }
+  #modalBox {
+    background: #fff; border-radius: 14px; padding: 24px; max-width: 380px; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4); max-height: 86vh; overflow-y: auto;
+  }
+  #modalBox h3 { margin-top: 0; }
+  #modalBox .modal-btns { display: flex; gap: 10px; margin-top: 16px; }
+  #modalBox button {
+    flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;
+  }
+  .btn-yes { background: #2a5298; color: #fff; }
+  .btn-no { background: #ccc; }
+  .modal-btns-col { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+  .modal-btns-col button { padding: 11px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+  .travel-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; max-height: 320px; overflow-y: auto; margin-top: 12px; }
+  .travel-option { padding: 6px 2px; font-size: 11px; border-radius: 6px; border: 1px solid #ccc; background: #f5f5f5; cursor: pointer; }
+  .travel-option:hover { background: #dce8ff; }
+  .travel-option:disabled { opacity: 0.4; cursor: not-allowed; }
+  #loanList { font-size: 12px; }
+  .modal-input {
+    width: 100%; padding: 8px; margin: 6px 0; border: 1px solid #ccc; border-radius: 6px;
+    font-size: 14px; text-align: center; box-sizing: border-box;
+  }
+
+  #rulesToggle { display:none; text-align: center; margin-top: 10px; }
+  #rulesToggle a { color: #dce8ff; cursor: pointer; font-size: 13px; text-decoration: underline; }
+  #rulesBox { max-width: 560px; margin: 10px auto; background: #fff; border-radius: 10px; padding: 16px; font-size: 13px; display: none; line-height: 1.6; }
+  #rulesBox .kit-list-item { margin: 3px 0; }
+
+  #roomCodeDisplay { font-size: 20px; font-weight: bold; color: #2a5298; letter-spacing: 1px; }
+  .roster-row { display: flex; align-items: center; justify-content: space-between; background: #f5f5f5; padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+  .roster-row button { border: none; background: #c0392b; color: #fff; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h1>🎲 땅따먹기 대전</h1>
+
+<!-- ================= 로그인 화면 ================= -->
+<div id="loginScreen" class="card-box">
+  <h2>로그인</h2>
+  <input id="loginUsername" placeholder="아이디">
+  <input id="loginPassword" type="password" placeholder="비밀번호">
+  <div id="loginError"></div>
+  <button class="primary-btn" onclick="handleLogin()">로그인</button>
+  <button class="primary-btn secondary-btn" onclick="handleRegister()">회원가입</button>
+  <div class="link-btn"><a onclick="playAsGuest()">게스트로 계속하기 (기본 킷만 사용 가능)</a></div>
+  <div class="notice">* 계정 데이터(아이디/코인/보유 킷)는 이 게임을 사용하는 모든 사람과 공유되는 저장소에 저장됩니다. 민감한 비밀번호는 사용하지 마세요.</div>
+</div>
+
+<!-- ================= 로비 화면 ================= -->
+<div id="lobbyScreen" class="card-box" style="display:none;">
+  <h2 id="lobbyGreeting">환영합니다!</h2>
+  <p id="lobbyCoins">💰 코인: 0</p>
+  <div class="setup-section">
+    <label class="title">보유 킷</label>
+    <div class="kit-grid" id="lobbyKitGrid"></div>
+  </div>
+  <button id="gachaBtn" class="primary-btn" onclick="drawGacha()">🎰 킷 뽑기 (100 코인)</button>
+  <div id="gachaResult"></div>
+  <button class="primary-btn" onclick="goToSetup()" style="margin-top:14px;">게임 시작하기 ▶</button>
+  <div class="link-btn"><a onclick="logout()">로그아웃</a></div>
+</div>
+
+<div id="rulesToggle"><a onclick="toggleRules()">📖 게임 규칙 &amp; 킷 능력 보기</a></div>
+<div id="rulesBox">
+  <b>🎯 목표</b>: 땅을 사서 다른 플레이어에게 통행료를 받아 가장 부자가 되세요!<br>
+  · 한 라인에 10칸씩, 총 36칸의 큰 보드입니다.<br>
+  · 주사위를 굴려 이동, 빈 땅에 도착하면 구매 가능<br>
+  · 남의 땅에 도착하면 통행료 지불 (같은 색 땅을 모두 가지면 통행료 2배!)<br>
+  · 🤝 남의 땅에 도착하면 통행료를 전액 낼지, 원하는 금액으로 흥정을 제안할지, 원하는 가격에 그 땅을 사겠다고 제안할지 직접 정할 수 있어요.<br>
+  · 💳 내 턴에는 다른 플레이어(AI 포함)에게 대출을 요청할 수 있어요. 금액·기간(턴)·이자율을 직접 써서 계약 조건을 제안하면 상대가 수락/거절합니다.<br>
+  · 황금열쇠 칸: 랜덤 이벤트 발생 / 세금징수소: 세금 납부<br>
+  · 🚔 감옥: 도착하면 3턴(도둑 킷은 5턴) 동안 아무것도 못 해요. 세계여행: 원하는 칸을 직접 골라 이동해요.<br>
+  · 돈이 마이너스가 되면 파산! 마지막까지 살아남거나, 정해진 턴이 끝났을 때 자산(현금+땅값)이 가장 많은 사람이 승리합니다.<br>
+  · 게임이 끝나면 내(로그인한 계정) 최종 자산에 비례해 코인을 얻고, 우승하면 보너스 코인도 받아요. 로비에서 코인 100개로 킷을 뽑을 수 있어요.<br>
+  · 킷 등급: 일반(기본킷) &lt; 희귀(대부분) &lt; <b style="color:#8e44ad;">영웅(10%)</b> &lt; <b style="color:#e07b00;">전설(1%)</b> &lt; <b style="color:#c0392b;">영원(0.01%)</b> — 등급이 높을수록 능력이 강력해요.<br>
+  · 🌀 <b>카오스모드</b>: 황금열쇠에서 무난한 이벤트 대신 재산 3배/전 재산 몰수/전원 재산 재분배/즉사/판 뒤집기(게임 강제종료)처럼 극단적인 카드만 등장합니다. 하이리스크 하이리턴!<br>
+  · 🌐 <b>온라인 멀티</b>: 방을 만들어 다른 기기에 있는 사람과 함께 플레이할 수 있어요.<br><br>
+  <b>👤 킷 (캐릭터) 능력</b><br>
+  <div id="kitDescList"></div>
+</div>
+
+<!-- ================= 설정 화면 ================= -->
+<div id="setupScreen" class="card-box" style="display:none;">
+  <h2>게임 설정</h2>
+
+  <div class="setup-section">
+    <label class="title">모드 선택</label>
+    <div class="choice-row">
+      <div class="choice-btn selected" data-mode="single" onclick="selectMode('single')">🤖 1인 플레이 (AI 대결)</div>
+      <div class="choice-btn" data-mode="multi" onclick="selectMode('multi')">👥 같이 플레이 (한 기기)</div>
+      <div class="choice-btn" data-mode="online" onclick="selectMode('online')">🌐 온라인 멀티</div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <label class="title">게임 규칙 모드</label>
+    <div class="choice-row">
+      <div class="choice-btn selected" data-gamemode="normal" onclick="selectGameMode('normal')">🎴 일반모드</div>
+      <div class="choice-btn" data-gamemode="chaos" onclick="selectGameMode('chaos')">🌀 카오스모드</div>
+    </div>
+    <div id="gameModeDesc" style="font-size:12px;color:#888;margin-top:6px;">황금열쇠에서 무난한 이벤트가 나옵니다.</div>
+  </div>
+
+  <div id="localSetupBody">
+    <div class="setup-section">
+      <label class="title" id="countLabel">인원 수 (나 + AI)</label>
+      <div class="choice-row" id="countRow">
+        <div class="choice-btn selected" data-n="2" onclick="selectCount(2)">2인</div>
+        <div class="choice-btn" data-n="3" onclick="selectCount(3)">3인</div>
+        <div class="choice-btn" data-n="4" onclick="selectCount(4)">4인</div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <label class="title">플레이어 &amp; 킷 선택</label>
+      <div id="nameInputs"></div>
+    </div>
+
+    <button id="startGameBtn" class="primary-btn" onclick="startGame()">게임 시작!</button>
+  </div>
+
+  <div class="link-btn"><a onclick="backToLobbyFromSetup()">◀ 로비로 돌아가기</a></div>
+</div>
+
+<!-- ================= 온라인 멀티 화면 ================= -->
+<div id="onlineScreen" class="card-box" style="display:none;">
+  <h2>🌐 온라인 멀티플레이</h2>
+  <div id="onlineChoiceView">
+    <button class="primary-btn" onclick="startHostRoom()">🏠 방 만들기 (호스트)</button>
+    <div style="margin:14px 0;text-align:center;color:#888;font-size:12px;">— 또는 —</div>
+    <input id="joinCodeInput" placeholder="방 코드 입력">
+    <button class="primary-btn secondary-btn" onclick="showJoinForm()">코드로 참가하기</button>
+  </div>
+  <div id="onlineJoinFormView" style="display:none;">
+    <input id="joinNameInput" placeholder="이름">
+    <label class="title" style="font-size:13px;">내 킷</label>
+    <div class="kit-grid" id="joinKitGrid"></div>
+    <button class="primary-btn" onclick="submitJoinRoom()" style="margin-top:10px;">참가하기</button>
+  </div>
+  <div id="onlineWaitingView" style="display:none;">
+    <p style="text-align:center;color:#555;">호스트가 게임을 준비하고 있습니다...</p>
+  </div>
+  <div id="onlineHostView" style="display:none;">
+    <p style="text-align:center;">방 코드<br><span id="roomCodeDisplay">-</span></p>
+    <label class="title" style="font-size:13px;">내 킷</label>
+    <div class="kit-grid" id="hostSelfKitGrid"></div>
+    <label class="title" style="font-size:13px;margin-top:10px;">참가자</label>
+    <div id="rosterList"></div>
+    <button class="primary-btn secondary-btn" onclick="addAISlot()">🤖 AI 추가</button>
+    <button class="primary-btn" id="onlineStartBtn" onclick="startOnlineGame()">게임 시작</button>
+  </div>
+  <div id="onlineError" style="color:#c0392b;font-size:12px;text-align:center;margin-top:6px;"></div>
+  <div class="link-btn"><a onclick="backToSetupFromOnline()">◀ 뒤로</a></div>
+</div>
+
+<!-- ================= 게임 화면 ================= -->
+<div id="gameScreen">
+  <div id="board"></div>
+
+  <div id="sidePanel">
+    <div class="panel-box">
+      <h3>플레이어</h3>
+      <div id="playerList"></div>
+    </div>
+    <div class="panel-box">
+      <h3>내 소유지 (건물 짓기)</h3>
+      <div id="buildList"><div style="font-size:12px;color:#888;">보유한 땅이 없습니다.</div></div>
+    </div>
+    <div class="panel-box">
+      <h3>💳 대출</h3>
+      <div id="loanList"></div>
+    </div>
+    <div class="panel-box">
+      <h3>진행 기록</h3>
+      <div id="logBox"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 보드 중앙 -->
+<div id="boardCenterTemplate" style="display:none;">
+  <div id="boardCenter">
+    <h3>🎲 땅따먹기</h3>
+    <div id="turnInfo">-</div>
+    <div id="diceDisplay">⚀ ⚀</div>
+    <div id="diceSum"></div>
+    <button id="rollBtn" onclick="netAction('roll')">주사위 굴리기</button>
+    <button id="endTurnBtn" onclick="netAction('endTurn')">턴 종료</button>
+  </div>
+</div>
+
+<!-- 모달 -->
+<div id="modalOverlay">
+  <div id="modalBox"></div>
+</div>
+
+<script>
+/* ==================================================
+   킷 (캐릭터) 데이터
+================================================== */
+const RARITY_INFO = {
+  common:  { label: '일반', color: '#999' },
+  rare:    { label: '희귀', color: '#2a5298' },
+  epic:    { label: '영웅', color: '#8e44ad' },
+  legend:  { label: '전설', color: '#e07b00' },
+  eternal: { label: '영원', color: '#c0392b' },
+};
+const KITS = [
+  { id: 'basic',      emoji: '🙂', name: '기본',   rarity: 'common', desc: '특수능력 없음 (항상 사용 가능)' },
+  { id: 'architect',  emoji: '🏗️', name: '건축가', rarity: 'rare', desc: '건물 건설 비용 30% 감소' },
+  { id: 'tycoon',     emoji: '💰', name: '사업가', rarity: 'rare', desc: '내 땅 통행료 수입 20% 증가' },
+  { id: 'traveler',   emoji: '🧳', name: '여행가', rarity: 'rare', desc: '세계여행 시 AI도 유리한 칸을 스스로 골라 이동 (사람은 누구나 직접 선택 가능)' },
+  { id: 'heir',       emoji: '💵', name: '상속자', rarity: 'rare', desc: '시작 자금 +1,000만원' },
+  { id: 'accountant', emoji: '🧾', name: '세무사', rarity: 'rare', desc: '세금 50% 감면' },
+  { id: 'gambler',    emoji: '🎲', name: '도박사', rarity: 'rare', desc: '더블(같은 눈)이 나오면 +200 보너스' },
+  { id: 'thief',      emoji: '🥷', name: '도둑',   rarity: 'rare', desc: '같은 칸에 다른 플레이어가 있으면 돈을 훔치는 미니게임 가능(최대 상대 소지금의 30%, 성공률 65%). 대신 감옥 형량이 5턴(기본 3턴)' },
+  { id: 'lucky',      emoji: '🍀', name: '행운아', rarity: 'rare', desc: '황금열쇠의 나쁜 효과가 절반으로 감소' },
+  { id: 'conqueror',  emoji: '🦅', name: '정복자', rarity: 'epic', desc: '같은 색 땅을 모두 모으면 통행료가 3배(기본은 2배)' },
+  { id: 'archmage',   emoji: '🧙', name: '대마법사', rarity: 'epic', desc: '황금열쇠/카오스카드의 나쁜 효과가 완전히 무효화됨' },
+  { id: 'dragonoid',  emoji: '🐲', name: '용기사', rarity: 'epic', desc: '건물 건설 비용 50% 감소 + 세금 30% 감면' },
+  { id: 'emperor',    emoji: '👑', name: '황제',   rarity: 'legend', desc: '시작 자금 1억원(2배) + 통행료를 낼 때 항상 20% 할인' },
+  { id: 'shadowlord', emoji: '🌙', name: '그림자군주', rarity: 'legend', desc: '도둑의 강화판: 훔치기 성공률 90%, 최대 상대 소지금의 50%까지, 실패해도 감옥에 가지 않고 돈만 돌려줌' },
+  { id: 'origin',     emoji: '🌌', name: '태초의 존재', rarity: 'eternal', desc: '시작 자금 1.5억원(3배), 세금 완전 면제, 건설비 50% 감소, 통행료 30% 할인, 세트완성 통행료 3배 — 모든 능력이 합쳐진 궁극의 킷' },
+];
+function kitInfo(kitId) { return KITS.find(k => k.id === kitId); }
+function kitRarityClass(kitId) { const k = kitInfo(kitId); return k ? 'rarity-' + k.rarity : ''; }
+document.getElementById('kitDescList').innerHTML = KITS.map(k =>
+  `<div class="kit-list-item">${k.emoji} <b>${k.name}</b> <span style="color:${RARITY_INFO[k.rarity].color};font-size:10.5px;">[${RARITY_INFO[k.rarity].label}]</span> — ${k.desc}</div>`
+).join('');
+
+/* ==================================================
+   계정 / 로그인 / 로비 / 가챠
+================================================== */
+let currentAccount = null;
+const GACHA_COST = 100;
+
+function accountKey(username) { return 'account:' + username.trim().toLowerCase(); }
+function setLoginError(msg) { document.getElementById('loginError').textContent = msg || ''; }
+
+async function handleRegister() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!username || !password) { setLoginError('아이디와 비밀번호를 입력하세요.'); return; }
+  try {
+    let existing = null;
+    try { existing = await window.storage.get(accountKey(username), true); } catch (e) { existing = null; }
+    if (existing) { setLoginError('이미 존재하는 아이디입니다.'); return; }
+    const acc = { username, password, coins: 0, unlockedKits: ['basic'] };
+    const saved = await window.storage.set(accountKey(username), JSON.stringify(acc), true);
+    if (!saved) { setLoginError('계정 생성에 실패했습니다. 다시 시도해주세요.'); return; }
+    currentAccount = { ...acc, isGuest: false };
+    setLoginError('');
+    enterLobby();
+  } catch (e) {
+    setLoginError('회원가입 중 오류가 발생했습니다.');
+  }
+}
+
+async function handleLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!username || !password) { setLoginError('아이디와 비밀번호를 입력하세요.'); return; }
+  try {
+    const result = await window.storage.get(accountKey(username), true);
+    if (!result) { setLoginError('존재하지 않는 아이디입니다. 회원가입을 눌러주세요.'); return; }
+    const acc = JSON.parse(result.value);
+    if (acc.password !== password) { setLoginError('비밀번호가 틀렸습니다.'); return; }
+    if (!acc.unlockedKits || !acc.unlockedKits.includes('basic')) {
+      acc.unlockedKits = acc.unlockedKits || [];
+      acc.unlockedKits.push('basic');
+    }
+    currentAccount = { ...acc, isGuest: false };
+    setLoginError('');
+    enterLobby();
+  } catch (e) {
+    setLoginError('로그인 중 오류가 발생했습니다.');
+  }
+}
+
+function playAsGuest() {
+  currentAccount = { username: '게스트', password: '', coins: 0, unlockedKits: ['basic'], isGuest: true };
+  enterLobby();
+}
+
+async function saveAccount() {
+  if (!currentAccount || currentAccount.isGuest) return;
+  try {
+    await window.storage.set(accountKey(currentAccount.username), JSON.stringify({
+      username: currentAccount.username,
+      password: currentAccount.password,
+      coins: currentAccount.coins,
+      unlockedKits: currentAccount.unlockedKits,
+    }), true);
+  } catch (e) {
+    console.error('계정 저장 실패', e);
+  }
+}
+
+function enterLobby() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('lobbyScreen').style.display = 'block';
+  document.getElementById('rulesToggle').style.display = 'block';
+  document.getElementById('gachaResult').textContent = '';
+  renderLobby();
+}
+
+function renderLobby() {
+  document.getElementById('lobbyGreeting').textContent = currentAccount.isGuest
+    ? '게스트로 플레이 중'
+    : `환영합니다, ${currentAccount.username}님!`;
+  document.getElementById('lobbyCoins').textContent = `💰 코인: ${currentAccount.coins}`;
+
+  const grid = document.getElementById('lobbyKitGrid');
+  grid.innerHTML = KITS.map(k => {
+    const locked = !currentAccount.unlockedKits.includes(k.id);
+    return `<div class="kit-btn ${kitRarityClass(k.id)} ${locked ? 'locked' : ''}" title="${k.desc}">${k.emoji}<span>${k.name}</span></div>`;
+  }).join('');
+
+  const gachaBtn = document.getElementById('gachaBtn');
+  if (currentAccount.isGuest) {
+    gachaBtn.disabled = true;
+    gachaBtn.title = '로그인 후 이용할 수 있어요.';
+  } else if (currentAccount.coins < GACHA_COST) {
+    gachaBtn.disabled = true;
+    gachaBtn.title = `코인이 부족합니다. (${GACHA_COST} 코인 필요)`;
+  } else {
+    gachaBtn.disabled = false;
+    gachaBtn.title = '';
+  }
+}
+
+const GACHA_RARITY_TABLE = [
+  { rarity: 'eternal', chance: 0.0001 },
+  { rarity: 'legend',  chance: 0.01 },
+  { rarity: 'epic',    chance: 0.10 },
+  { rarity: 'rare',    chance: 1 }, // 나머지 전부
+];
+const GACHA_REFUND = { rare: 30, epic: 150, legend: 1000, eternal: 5000 };
+
+function drawGachaKit() {
+  const roll = Math.random();
+  let acc = 0;
+  for (const tier of GACHA_RARITY_TABLE) {
+    acc += tier.chance;
+    if (roll < acc || tier.rarity === 'rare') {
+      const pool = KITS.filter(k => k.rarity === tier.rarity);
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+  }
+  return KITS.find(k => k.id === 'basic');
+}
+
+async function drawGacha() {
+  if (currentAccount.isGuest || currentAccount.coins < GACHA_COST) return;
+  currentAccount.coins -= GACHA_COST;
+  const picked = drawGachaKit();
+  const rarityLabel = RARITY_INFO[picked.rarity].label;
+  let resultMsg;
+  if (currentAccount.unlockedKits.includes(picked.id)) {
+    const refund = GACHA_REFUND[picked.rarity] || 30;
+    currentAccount.coins += refund;
+    resultMsg = `${picked.emoji} [${rarityLabel}] ${picked.name} (이미 보유 중! 코인 ${refund} 환급)`;
+  } else {
+    currentAccount.unlockedKits.push(picked.id);
+    resultMsg = `🎉 [${rarityLabel}] ${picked.emoji} ${picked.name} 획득!`;
+  }
+  await saveAccount();
+  renderLobby();
+  document.getElementById('gachaResult').textContent = resultMsg;
+}
+
+function logout() {
+  currentAccount = null;
+  document.getElementById('lobbyScreen').style.display = 'none';
+  document.getElementById('rulesToggle').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('loginUsername').value = '';
+  document.getElementById('loginPassword').value = '';
+  setLoginError('');
+  document.getElementById('loginScreen').style.display = 'block';
+}
+
+function backToLobbyFromSetup() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('lobbyScreen').style.display = 'block';
+  renderLobby();
+}
+
+/* ==================================================
+   보드 데이터 (한 라인 10칸, 총 36칸)
+================================================== */
+const GROUP_COLORS = { pink:'group-pink', orange:'group-orange', yellow:'group-yellow', green:'group-green', blue:'group-blue', purple:'group-purple' };
+const MONEY_SCALE = 100000; // 인플레이션 배율 - 보드 기본 단위 × 10만 = 실제 게임 금액(원)
+
+const BOARD = [
+  {id:0,  type:'start',   name:'시작'},
+  {id:1,  type:'property',name:'서울',    group:'pink',   price:100, rent:20},
+  {id:2,  type:'property',name:'부산',    group:'pink',   price:120, rent:24},
+  {id:3,  type:'card',    name:'황금열쇠'},
+  {id:4,  type:'property',name:'대구',    group:'pink',   price:140, rent:28},
+  {id:5,  type:'transit', name:'인천공항',price:200, rent:0},
+  {id:6,  type:'property',name:'도쿄',    group:'orange', price:160, rent:32},
+  {id:7,  type:'property',name:'오사카',  group:'orange', price:180, rent:36},
+  {id:8,  type:'card',    name:'황금열쇠'},
+  {id:9,  type:'tax',     name:'세금징수소', amount:150},
+  {id:10, type:'property',name:'삿포로',  group:'orange', price:200, rent:40},
+  {id:11, type:'transit', name:'김포공항',price:200, rent:0},
+  {id:12, type:'card',    name:'황금열쇠'},
+  {id:13, type:'property',name:'뉴욕',    group:'green',  price:220, rent:44},
+  {id:14, type:'property',name:'시카고',  group:'green',  price:240, rent:48},
+  {id:15, type:'property',name:'LA',     group:'green',  price:260, rent:52},
+  {id:16, type:'transit', name:'부산항',  price:200, rent:0},
+  {id:17, type:'card',    name:'황금열쇠'},
+  {id:18, type:'jail',    name:'감옥'},
+  {id:19, type:'property',name:'파리',    group:'blue',   price:280, rent:56},
+  {id:20, type:'property',name:'런던',    group:'blue',   price:320, rent:64},
+  {id:21, type:'card',    name:'황금열쇠'},
+  {id:22, type:'property',name:'로마',    group:'blue',   price:360, rent:72},
+  {id:23, type:'transit', name:'인천항',  price:200, rent:0},
+  {id:24, type:'property',name:'뭄바이',  group:'yellow', price:380, rent:76},
+  {id:25, type:'property',name:'델리',    group:'yellow', price:400, rent:80},
+  {id:26, type:'card',    name:'황금열쇠'},
+  {id:27, type:'travel',  name:'세계여행'},
+  {id:28, type:'property',name:'상하이',  group:'yellow', price:420, rent:84},
+  {id:29, type:'transit', name:'상하이항',price:200, rent:0},
+  {id:30, type:'card',    name:'황금열쇠'},
+  {id:31, type:'property',name:'시드니',  group:'purple', price:460, rent:92},
+  {id:32, type:'property',name:'멜버른',  group:'purple', price:500, rent:100},
+  {id:33, type:'card',    name:'황금열쇠'},
+  {id:34, type:'transit', name:'뉴욕항',  price:200, rent:0},
+  {id:35, type:'property',name:'오클랜드',group:'purple', price:540, rent:108},
+];
+BOARD.forEach(t => {
+  t.owner = null;
+  t.level = 0;
+  if (t.price) t.price *= MONEY_SCALE;
+  if (t.rent) t.rent *= MONEY_SCALE;
+  if (t.amount) t.amount *= MONEY_SCALE;
+});
+
+const RENT_MULT = [0, 3, 5, 7, 10];
+const TRANSIT_RENT = [0, 40, 80, 120, 160, 200, 250].map(v => v * MONEY_SCALE);
+const PLAYER_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+const CORNERS = [0, 9, 18, 27];
+const JAIL_TILE = 18;
+let loanIdCounter = 1;
+
+function fmt(n) { return Math.round(n).toLocaleString('ko-KR'); }
+
+const CARD_EVENTS = [
+  { text: '복권에 당첨되었습니다!', fn: (p) => { p.cash += 100 * MONEY_SCALE; } },
+  { text: '세금이 추징되었습니다.', fn: (p) => { p.cash -= 80 * MONEY_SCALE; } },
+  { text: '건물 수리비가 나갔습니다.', fn: (p) => { p.cash -= 50 * MONEY_SCALE; } },
+  { text: '투자에 성공했습니다!', fn: (p) => { p.cash += 150 * MONEY_SCALE; } },
+  { text: '👮 감옥으로 강제 이동됩니다.', fn: (p) => { sendToJail(p); } },
+  { text: '시작 지점으로 이동!', fn: (p) => { p.pos = 0; p.cash += 200 * MONEY_SCALE; } },
+  { text: '모든 플레이어에게 돈을 나눠줍니다.', fn: (p, all) => { all.forEach(o => { if (o !== p && !o.bankrupt) { o.cash += 50 * MONEY_SCALE; p.cash -= 50 * MONEY_SCALE; } }); } },
+  { text: '모든 플레이어에게서 돈을 걷습니다.', fn: (p, all) => { all.forEach(o => { if (o !== p && !o.bankrupt) { o.cash -= 50 * MONEY_SCALE; p.cash += 50 * MONEY_SCALE; } }); } },
+  { text: '7칸 전진합니다.', fn: (p) => { p.pos = (p.pos + 7) % BOARD.length; } },
+];
+
+const CHAOS_CARD_EVENTS = [
+  { text: '💥 핵폭탄 투하! 전 재산의 70%를 잃었습니다.', fn: (p) => { p.cash = Math.floor(p.cash * 0.3); } },
+  { text: '🌈 로또 1등 당첨! 재산이 3배가 되었습니다!', fn: (p) => { p.cash = Math.floor(p.cash * 3); } },
+  { text: '🃏 운명의 수레바퀴: 생존자 전원의 현금이 평균으로 재분배됩니다.', fn: (p, all) => {
+      const alive = all.filter(o => !o.bankrupt);
+      const total = alive.reduce((s, o) => s + o.cash, 0);
+      const avg = Math.floor(total / alive.length);
+      alive.forEach(o => { o.cash = avg; });
+    } },
+  { text: '👽 외계인 납치! 3턴 동안 아무것도 못 합니다.', fn: (p) => { p.frozenTurns = 2; } },
+  { text: '🏦 은행 파산! 다른 모든 플레이어의 재산 절반을 내가 흡수합니다.', fn: (p, all) => {
+      all.forEach(o => { if (o !== p && !o.bankrupt) { const half = Math.floor(o.cash / 2); o.cash -= half; p.cash += half; } });
+    } },
+  { text: '🎰 카지노 올인!', fn: (p) => {
+      if (Math.random() < 0.5) { p.cash *= 2; p._chaosLog = '🎉 대박! 재산이 2배가 되었습니다!'; }
+      else { p.cash = 0; p._chaosLog = '💥 쪽박... 전 재산을 몽땅 잃었습니다.'; }
+    } },
+  { text: '🏗️ 부동산 붐! 완성된 내 땅 세트에 무료로 건물이 올라갑니다.', fn: (p) => {
+      BOARD.filter(t => t.owner === p.id && t.group && hasFullSet(p.id, t.group) && t.level < 4).forEach(t => t.level++);
+    } },
+  { text: '☠️ 부동산 폭락! 내가 가진 모든 땅을 몰수당하고 위로금을 받습니다.', fn: (p) => {
+      BOARD.forEach(t => { if (t.owner === p.id) { t.owner = null; t.level = 0; } });
+      p.cash += 100 * MONEY_SCALE;
+    } },
+  { text: '🌀 시공간 왜곡! 무작위 플레이어와 자리를 강제로 맞바꿉니다.', fn: (p, all) => {
+      const others = all.filter(o => o !== p && !o.bankrupt);
+      if (others.length) {
+        const target = others[Math.floor(Math.random() * others.length)];
+        const tmp = p.pos; p.pos = target.pos; target.pos = tmp;
+        p._chaosLog = `🌀 ${target.name}과(와) 위치를 맞바꿨습니다!`;
+      }
+    } },
+  { text: '💸 세무조사 특별점검! 전 재산의 50%를 국고에 헌납합니다.', fn: (p) => { p.cash -= Math.floor(p.cash * 0.5); } },
+  { text: '🦄 수호천사 강림! 큰 돈을 받습니다!', fn: (p) => { p.cash += 1000 * MONEY_SCALE; } },
+  { text: '🔁 시간 역행! 한 번 더 턴을 진행합니다.', fn: (p) => { p.extraRoll = true; } },
+  { text: '🧨 도미노 파괴! 보드의 모든 건물이 초기화됩니다.', fn: () => { BOARD.forEach(t => { t.level = 0; }); } },
+  { text: '🎁 만능 상자!', fn: (p) => {
+      const empties = BOARD.filter(t => t.owner === null && (t.type === 'property' || t.type === 'transit'));
+      if (empties.length) {
+        const t = empties[Math.floor(Math.random() * empties.length)];
+        t.owner = p.id;
+        p._chaosLog = `🎁 ${t.name}을(를) 공짜로 획득했습니다!`;
+      } else {
+        p.cash += 200 * MONEY_SCALE;
+        p._chaosLog = '🎁 가져갈 빈 땅이 없어 대신 보상금을 받았습니다.';
+      }
+    } },
+  { text: '☠️ 즉사! 모든 재산을 잃고 그 자리에서 파산합니다.', fn: (p) => { p.cash = -1; } },
+  { text: '🃏 판 뒤집기! 누군가 테이블을 엎어버렸습니다! 게임이 이 순간 강제 종료됩니다.', fn: (p) => { p._forceEndGame = true; } },
+  { text: '💸 즉사급 청구서 도착! 상상도 못한 거액의 빚을 갚아야 합니다.', fn: (p) => { p.cash -= 1500000000; } },
+];
+
+/* ==================================================
+   설정 화면 로직
+================================================== */
+let setupMode = 'single';
+let setupCount = 2;
+let selectedGameMode = 'normal';
+let playerKitSelections = [];
+
+function selectGameMode(mode) {
+  selectedGameMode = mode;
+  document.querySelectorAll('[data-gamemode]').forEach(el => el.classList.toggle('selected', el.dataset.gamemode === mode));
+  document.getElementById('gameModeDesc').textContent = mode === 'chaos'
+    ? '🌀 황금열쇠에서 극단적인 카오스 카드만 등장합니다. 재산이 순식간에 3배가 되거나 즉사할 수도 있어요!'
+    : '황금열쇠에서 무난한 이벤트가 나옵니다.';
+}
+
+function initKitSelections(count) {
+  const pool = currentAccount ? currentAccount.unlockedKits : ['basic'];
+  playerKitSelections = [];
+  for (let i = 0; i < count; i++) playerKitSelections.push(pool[i % pool.length]);
+}
+
+function selectMode(mode) {
+  setupMode = mode;
+  document.querySelectorAll('[data-mode]').forEach(el => el.classList.toggle('selected', el.dataset.mode === mode));
+  if (mode === 'online') {
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('onlineScreen').style.display = 'block';
+    resetOnlineScreen();
+    return;
+  }
+  document.getElementById('localSetupBody').style.display = 'block';
+  document.getElementById('countLabel').textContent = mode === 'single' ? '인원 수 (나 + AI)' : '인원 수 (모두 사람)';
+  renderNameInputs();
+}
+function selectCount(n) {
+  setupCount = n;
+  document.querySelectorAll('[data-n]').forEach(el => el.classList.toggle('selected', Number(el.dataset.n) === n));
+  initKitSelections(n);
+  renderNameInputs();
+}
+function renderNameInputs() {
+  const wrap = document.getElementById('nameInputs');
+  wrap.innerHTML = '';
+  for (let i = 0; i < setupCount; i++) {
+    const isAI = setupMode === 'single' && i > 0;
+    const card = document.createElement('div');
+    card.className = 'player-setup-card';
+    const defaultName = isAI ? `AI ${i}` : (i === 0 && setupMode === 'single' ? (currentAccount ? currentAccount.username : '나') : `플레이어${i + 1}`);
+    const kitButtons = KITS.map(k => {
+      const locked = !currentAccount || !currentAccount.unlockedKits.includes(k.id);
+      return `
+      <div class="kit-btn ${kitRarityClass(k.id)} ${locked ? 'locked' : ''}" data-player="${i}" data-kit="${k.id}" title="${k.desc}" onclick="selectKit(${i}, '${k.id}')">
+        ${k.emoji}<span>${k.name}</span>
+      </div>`;
+    }).join('');
+    card.innerHTML = `
+      <input id="nameInput${i}" placeholder="${isAI ? 'AI 이름' : '이름'}" value="${defaultName}">
+      <div class="kit-grid">${kitButtons}</div>
+    `;
+    wrap.appendChild(card);
+  }
+  refreshKitGrids();
+}
+function selectKit(playerIndex, kitId) {
+  if (!currentAccount || !currentAccount.unlockedKits.includes(kitId)) return;
+  const otherIndex = playerKitSelections.findIndex((kid, idx) => kid === kitId && idx !== playerIndex);
+  if (otherIndex !== -1) {
+    const tmp = playerKitSelections[playerIndex];
+    playerKitSelections[playerIndex] = kitId;
+    playerKitSelections[otherIndex] = tmp;
+  } else {
+    playerKitSelections[playerIndex] = kitId;
+  }
+  refreshKitGrids();
+}
+function refreshKitGrids() {
+  document.querySelectorAll('#nameInputs .kit-btn').forEach(btn => {
+    const pi = Number(btn.dataset.player);
+    const kid = btn.dataset.kit;
+    btn.classList.toggle('selected', playerKitSelections[pi] === kid);
+  });
+}
+function toggleRules() {
+  const box = document.getElementById('rulesBox');
+  box.style.display = box.style.display === 'block' ? 'none' : 'block';
+}
+
+function goToSetup() {
+  document.getElementById('lobbyScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'block';
+  document.getElementById('localSetupBody').style.display = 'block';
+  initKitSelections(setupCount);
+  renderNameInputs();
+}
+
+/* ==================================================
+   온라인 멀티플레이 (PeerJS)
+================================================== */
+let peer = null;
+const netState = { mode: null, isHost: false, mySlot: null, hostConn: null, slotConns: {}, roomCode: null };
+let onlineRoster = []; // host 전용: [{ key, name, kit, isAI, connId }]
+let joinKitSelection = 'basic';
+
+function resetOnlineScreen() {
+  document.getElementById('onlineChoiceView').style.display = 'block';
+  document.getElementById('onlineJoinFormView').style.display = 'none';
+  document.getElementById('onlineWaitingView').style.display = 'none';
+  document.getElementById('onlineHostView').style.display = 'none';
+  document.getElementById('onlineError').textContent = '';
+}
+function backToSetupFromOnline() {
+  document.getElementById('onlineScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'block';
+  document.querySelectorAll('[data-mode]').forEach(el => el.classList.toggle('selected', el.dataset.mode === 'single'));
+  setupMode = 'single';
+}
+function isMySlot(playerId) { return netState.mode !== 'online' || netState.mySlot === playerId; }
+function netOnlineError(msg) { document.getElementById('onlineError').textContent = msg; }
+
+function startHostRoom() {
+  netState.mode = 'online';
+  netState.isHost = true;
+  netState.mySlot = 0;
+  peer = new Peer();
+  peer.on('open', id => {
+    netState.roomCode = id;
+    onlineRoster = [{ key: 'host', name: currentAccount ? currentAccount.username : '호스트', kit: 'basic', isAI: false, connId: 'host' }];
+    document.getElementById('onlineChoiceView').style.display = 'none';
+    document.getElementById('onlineHostView').style.display = 'block';
+    document.getElementById('roomCodeDisplay').textContent = id;
+    renderHostSelfKitGrid();
+    renderRoster();
+  });
+  peer.on('connection', conn => {
+    conn.on('data', raw => {
+      let msg; try { msg = JSON.parse(raw); } catch (e) { return; }
+      handleHostMessage(conn, msg);
+    });
+    conn.on('close', () => {
+      onlineRoster = onlineRoster.filter(r => r.connId !== conn.peer);
+      delete netState.slotConns[conn.peer];
+      renderRoster();
+    });
+  });
+  peer.on('error', err => netOnlineError('연결 오류: ' + err.type));
+}
+
+function renderHostSelfKitGrid() {
+  const grid = document.getElementById('hostSelfKitGrid');
+  const pool = currentAccount ? currentAccount.unlockedKits : ['basic'];
+  grid.innerHTML = KITS.map(k => {
+    const locked = !pool.includes(k.id);
+    return `<div class="kit-btn ${kitRarityClass(k.id)} ${locked ? 'locked' : ''} ${onlineRoster[0] && onlineRoster[0].kit === k.id ? 'selected' : ''}" title="${k.desc}" onclick="pickHostKit('${k.id}')">${k.emoji}<span>${k.name}</span></div>`;
+  }).join('');
+}
+function pickHostKit(kitId) {
+  const pool = currentAccount ? currentAccount.unlockedKits : ['basic'];
+  if (!pool.includes(kitId)) return;
+  onlineRoster[0].kit = kitId;
+  renderHostSelfKitGrid();
+}
+
+function renderRoster() {
+  const wrap = document.getElementById('rosterList');
+  wrap.innerHTML = onlineRoster.map((r, i) => {
+    const ki = kitInfo(r.kit);
+    const removable = r.isAI || r.connId === 'host' ? (r.isAI ? `<button onclick="removeRosterEntry(${i})">제거</button>` : '') : '';
+    return `<div class="roster-row"><span>${i === 0 ? '👑 ' : ''}${r.name}${r.isAI ? ' 🤖' : ''} - ${ki ? ki.emoji + ' ' + ki.name : ''}</span>${removable}</div>`;
+  }).join('');
+  document.getElementById('onlineStartBtn').disabled = onlineRoster.length < 2;
+  broadcastRoster();
+}
+function broadcastRoster() {
+  const msg = JSON.stringify({ type: 'roster', count: onlineRoster.length });
+  Object.values(netState.slotConns).forEach(c => { if (c && c.open) c.send(msg); });
+}
+function addAISlot() {
+  if (onlineRoster.length >= 4) return;
+  onlineRoster.push({ key: 'ai' + Date.now(), name: `AI ${onlineRoster.length}`, kit: KITS[onlineRoster.length % KITS.length].id, isAI: true, connId: null });
+  renderRoster();
+}
+function removeRosterEntry(i) {
+  if (!onlineRoster[i] || !onlineRoster[i].isAI) return;
+  onlineRoster.splice(i, 1);
+  renderRoster();
+}
+
+function handleHostMessage(conn, msg) {
+  if (msg.type === 'joinInfo') {
+    if (onlineRoster.length >= 4 && !onlineRoster.find(r => r.connId === conn.peer)) {
+      conn.send(JSON.stringify({ type: 'roomFull' }));
+      return;
+    }
+    const existing = onlineRoster.find(r => r.connId === conn.peer);
+    if (existing) { existing.name = msg.name; existing.kit = msg.kit; }
+    else onlineRoster.push({ key: conn.peer, name: msg.name, kit: msg.kit, isAI: false, connId: conn.peer });
+    netState.slotConns[conn.peer] = conn;
+    renderRoster();
+  } else if (msg.type === 'action') {
+    dispatchAction(msg.action, msg.payload || {});
+  } else if (msg.type === 'inputResponse') {
+    handleInputResponse(msg.kind, msg.value, msg.fields || {});
+  }
+}
+
+function showJoinForm() {
+  const code = document.getElementById('joinCodeInput').value.trim();
+  if (!code) { netOnlineError('방 코드를 입력하세요.'); return; }
+  netState.roomCode = code;
+  document.getElementById('onlineChoiceView').style.display = 'none';
+  document.getElementById('onlineJoinFormView').style.display = 'block';
+  document.getElementById('joinNameInput').value = currentAccount ? currentAccount.username : '플레이어';
+  const pool = currentAccount ? currentAccount.unlockedKits : ['basic'];
+  joinKitSelection = pool[0] || 'basic';
+  const grid = document.getElementById('joinKitGrid');
+  grid.innerHTML = KITS.map(k => {
+    const locked = !pool.includes(k.id);
+    return `<div class="kit-btn ${kitRarityClass(k.id)} ${locked ? 'locked' : ''} ${joinKitSelection === k.id ? 'selected' : ''}" title="${k.desc}" onclick="pickJoinKit('${k.id}')">${k.emoji}<span>${k.name}</span></div>`;
+  }).join('');
+}
+function pickJoinKit(kitId) {
+  const pool = currentAccount ? currentAccount.unlockedKits : ['basic'];
+  if (!pool.includes(kitId)) return;
+  joinKitSelection = kitId;
+  document.querySelectorAll('#joinKitGrid .kit-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.includes(kitInfo(kitId).name));
+  });
+}
+function submitJoinRoom() {
+  const name = document.getElementById('joinNameInput').value.trim() || '플레이어';
+  netState.mode = 'online';
+  netState.isHost = false;
+  peer = new Peer();
+  peer.on('open', () => {
+    const conn = peer.connect(netState.roomCode);
+    conn.on('open', () => {
+      netState.hostConn = conn;
+      conn.send(JSON.stringify({ type: 'joinInfo', name, kit: joinKitSelection }));
+      document.getElementById('onlineJoinFormView').style.display = 'none';
+      document.getElementById('onlineWaitingView').style.display = 'block';
+    });
+    conn.on('data', raw => {
+      let msg; try { msg = JSON.parse(raw); } catch (e) { return; }
+      handlePeerMessage(msg);
+    });
+    conn.on('close', () => netOnlineError('호스트와 연결이 끊어졌습니다.'));
+    conn.on('error', () => netOnlineError('연결에 실패했습니다. 방 코드를 확인하세요.'));
+  });
+  peer.on('error', err => netOnlineError('연결 오류: ' + err.type));
+}
+
+function handlePeerMessage(msg) {
+  if (msg.type === 'roomFull') { netOnlineError('방이 가득 찼습니다.'); }
+  else if (msg.type === 'roster') { /* 대기 화면, 별도 표시 없이 대기 */ }
+  else if (msg.type === 'gameStart') { applyGameStart(msg); }
+  else if (msg.type === 'stateSync') { applyStateSync(msg); }
+  else if (msg.type === 'requestInput') { showLocalDecisionModal(msg.packet, msg.kind); }
+}
+
+function startOnlineGame() {
+  if (onlineRoster.length < 2) return;
+  const players = onlineRoster.map((r, i) => ({
+    id: i,
+    name: r.name,
+    isAI: r.isAI,
+    color: PLAYER_COLORS[i],
+    kit: r.kit,
+    cash: startCashFor(r.kit),
+    pos: 0,
+    bankrupt: false,
+    skipTurn: false,
+    frozenTurns: 0,
+    extraRoll: false,
+  }));
+  state = { players, current: 0, turnCount: 0, maxTurns: 40, over: false, gameMode: selectedGameMode, loans: [], turnPhase: 'rolling' };
+
+  onlineRoster.forEach((r, i) => {
+    if (r.connId && r.connId !== 'host') {
+      const conn = netState.slotConns[r.connId];
+      netState.slotConns[i] = conn; // 재인덱싱: playerId -> connection
+      if (conn && conn.open) {
+        conn.send(JSON.stringify({ type: 'gameStart', players, gameMode: selectedGameMode, mySlot: i }));
+      }
+    }
+  });
+
+  document.getElementById('onlineScreen').style.display = 'none';
+  document.getElementById('rulesToggle').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+
+  buildBoardDOM();
+  renderAll();
+  beginTurn();
+}
+
+function applyGameStart(msg) {
+  state = { players: msg.players, current: 0, turnCount: 0, maxTurns: 40, over: false, gameMode: msg.gameMode, loans: [], turnPhase: 'rolling' };
+  netState.mySlot = msg.mySlot;
+  BOARD.forEach(t => { t.owner = null; t.level = 0; });
+
+  document.getElementById('onlineScreen').style.display = 'none';
+  document.getElementById('rulesToggle').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+
+  buildBoardDOM();
+  renderAll();
+}
+
+function applyStateSync(msg) {
+  if (!state) return;
+  state = msg.state;
+  msg.board.forEach((bt, i) => { BOARD[i].owner = bt.owner; BOARD[i].level = bt.level; });
+  renderAll();
+}
+
+function broadcastState() {
+  if (!(netState.mode === 'online' && netState.isHost)) return;
+  const boardSync = BOARD.map(t => ({ owner: t.owner, level: t.level }));
+  const msg = JSON.stringify({ type: 'stateSync', state, board: boardSync });
+  Object.keys(netState.slotConns).forEach(key => {
+    const conn = netState.slotConns[key];
+    if (conn && conn.open) conn.send(msg);
+  });
+}
+
+function netAction(action, payload) {
+  payload = payload || {};
+  if (netState.mode === 'online' && !netState.isHost) {
+    if (netState.hostConn && netState.hostConn.open) netState.hostConn.send(JSON.stringify({ type: 'action', action, payload }));
+  } else {
+    dispatchAction(action, payload);
+  }
+}
+function dispatchAction(action, payload) {
+  if (action === 'roll') doRoll();
+  else if (action === 'endTurn') endTurn();
+  else if (action === 'build') buildHouse(payload.tileId);
+  else if (action === 'submitLoan') processLoanRequest(payload.borrowerId, payload.lenderId, payload.amount, payload.term, payload.interest);
+}
+
+/* ==================================================
+   범용 의사결정 패킷 시스템 (로컬 한 기기 / 온라인 공용)
+================================================== */
+function requestDecision(playerId, kind, packet) {
+  if (netState.mode === 'online' && !isMySlot(playerId)) {
+    const conn = netState.slotConns[playerId];
+    if (conn && conn.open) { conn.send(JSON.stringify({ type: 'requestInput', kind, packet })); return; }
+  }
+  showLocalDecisionModal(packet, kind);
+}
+
+function showLocalDecisionModal(packet, kind) {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const fieldIds = (packet.fields || []).map(f => f.id);
+  const fieldsHtml = (packet.fields || []).map(f =>
+    `<label style="display:block;text-align:left;font-size:12px;margin-top:6px;">${f.label}</label>
+     <input id="localField_${f.id}" class="modal-input" type="${f.type || 'number'}" value="${f.value}" ${f.min !== undefined ? `min="${f.min}"` : ''} ${f.max !== undefined ? `max="${f.max}"` : ''}>`
+  ).join('');
+  const manyActions = packet.actions.length > 4;
+  const actionsHtml = packet.actions.map(a => {
+    const cls = manyActions ? 'travel-option' : (a.primary ? 'btn-yes' : 'btn-no');
+    return `<button class="${cls}" ${a.disabled ? 'disabled' : ''} onclick='resolveLocalDecision(${JSON.stringify(kind)}, ${JSON.stringify(a.value)}, ${a.collect ? 'true' : 'false'}, ${JSON.stringify(fieldIds)})'>${a.label}</button>`;
+  }).join('');
+  box.innerHTML = `
+    <h3>${packet.title}</h3>
+    <p>${packet.message || ''}</p>
+    ${fieldsHtml}
+    <div class="${manyActions ? 'travel-grid' : 'modal-btns'}" ${manyActions ? 'style="grid-template-columns:repeat(3,1fr);"' : ''}>${actionsHtml}</div>
+  `;
+  overlay.style.display = 'flex';
+}
+
+function resolveLocalDecision(kind, value, collect, fieldIds) {
+  let fields = {};
+  if (collect) {
+    (fieldIds || []).forEach(id => {
+      const el = document.getElementById('localField_' + id);
+      fields[id] = el ? (Number(el.value) || 0) : 0;
+    });
+  }
+  closeModal();
+  if (netState.mode === 'online' && !netState.isHost) {
+    if (netState.hostConn && netState.hostConn.open) netState.hostConn.send(JSON.stringify({ type: 'inputResponse', kind, value, fields }));
+  } else {
+    handleInputResponse(kind, value, fields);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function handleInputResponse(kind, value, fields) {
+  fields = fields || {};
+  if (kind === 'buy') {
+    const { p, tile } = window._pendingBuy;
+    if (value === 'yes') buyTile(p, tile); else log(`${p.name}은(는) ${tile.name} 구매를 포기했습니다.`);
+    afterLandingResolved(p);
+  } else if (kind === 'rentChoice') {
+    const { p, tile, owner, fullRent } = window._rentContext;
+    if (value === 'pay') { payFullRent(p, tile, owner, fullRent); afterLandingResolved(p); }
+    else if (value === 'negotiate') {
+      const packet = {
+        title: '🤝 통행료 흥정',
+        message: `얼마를 제안하시겠습니까? (원래 통행료: ${fmt(fullRent)}, 내 현금: ${fmt(p.cash)})`,
+        fields: [{ id: 'amount', label: '제안 금액', type: 'number', value: Math.round(fullRent * 0.6), min: 0, max: fullRent }],
+        actions: [{ label: '전액 지불로 전환', value: 'cancel' }, { label: '제안 보내기', value: 'submit', primary: true, collect: true }],
+      };
+      requestDecision(p.id, 'negotiateAmount', packet);
+    } else if (value === 'purchase') {
+      const basePrice = tile.price + tile.level * houseCost(tile);
+      const packet = {
+        title: '🏠 땅 구매 제안',
+        message: `${tile.name}을(를) 얼마에 사시겠습니까? (기준가 ${fmt(basePrice)}, 내 현금: ${fmt(p.cash)})`,
+        fields: [{ id: 'price', label: '제안 가격', type: 'number', value: Math.min(basePrice, p.cash), min: 1, max: p.cash }],
+        actions: [{ label: '제안 안 함', value: 'cancel' }, { label: '제안 보내기', value: 'submit', primary: true, collect: true }],
+      };
+      requestDecision(p.id, 'purchaseAmount', packet);
+    }
+  } else if (kind === 'negotiateAmount') {
+    const { p, tile, owner, fullRent } = window._rentContext;
+    if (value === 'cancel') { payFullRent(p, tile, owner, fullRent); afterLandingResolved(p); }
+    else sendNegotiationOffer(Math.max(0, Math.round(fields.amount || 0)));
+  } else if (kind === 'purchaseAmount') {
+    const { p, tile, owner, fullRent } = window._rentContext;
+    if (value === 'cancel') { payFullRent(p, tile, owner, fullRent); afterLandingResolved(p); }
+    else {
+      let val = Math.max(1, Math.round(fields.price || 0));
+      if (val > p.cash) val = p.cash;
+      sendPurchaseOffer(val);
+    }
+  } else if (kind === 'negotiationApproval') {
+    const ctx = window._pendingNegotiation;
+    finishNegotiation(ctx.p, ctx.tile, ctx.owner, ctx.fullRent, ctx.offerAmount, value === 'accept');
+  } else if (kind === 'purchaseApproval') {
+    const ctx = window._pendingPurchase;
+    finishPurchase(ctx.p, ctx.tile, ctx.owner, ctx.fullRent, ctx.price, value === 'accept');
+  } else if (kind === 'aiRentOfferApproval') {
+    const ctx = window._pendingAIOffer;
+    finishNegotiation(ctx.p, ctx.tile, ctx.owner, ctx.fullRent, ctx.offer, value === 'accept');
+  } else if (kind === 'loanApproval') {
+    const { borrower, lender, amount, term, interest } = window._pendingLoan;
+    if (value === 'accept') {
+      grantLoan(borrower, lender, amount, term, interest);
+      log(`💰 ${lender.name}이(가) ${borrower.name}에게 ${fmt(amount)}을 대출해줬습니다. (이자 ${interest}%, ${term}턴 후 ${fmt(Math.round(amount * (1 + interest / 100)))} 상환)`);
+    } else {
+      log(`${lender.name}이(가) 대출 조건을 거절했습니다.`);
+    }
+    renderAll();
+  } else if (kind === 'travelPick') {
+    const { p, depth } = window._pendingTravel;
+    const tileId = Number(value);
+    p.pos = tileId;
+    log(`🧳 ${p.name}이(가) ${BOARD[tileId].name}(으)로 이동했습니다.`);
+    renderTokens();
+    setTimeout(() => handleLanding(p, depth + 1), 300);
+  } else if (kind === 'stealChoice') {
+    if (value === 'attempt') attemptSteal(); else stopStealing();
+  }
+}
+
+/* ==================================================
+   게임 상태 (로컬: 1인/같이 플레이)
+================================================== */
+let state = null;
+let rolledThisTurn = false;
+
+function startGame() {
+  const players = [];
+  for (let i = 0; i < setupCount; i++) {
+    const isAI = setupMode === 'single' && i > 0;
+    const nameInput = document.getElementById('nameInput' + i);
+    const kit = playerKitSelections[i];
+    players.push({
+      id: i,
+      name: (nameInput.value || `플레이어${i + 1}`).trim(),
+      isAI,
+      color: PLAYER_COLORS[i],
+      kit,
+      cash: startCashFor(kit),
+      pos: 0,
+      bankrupt: false,
+      skipTurn: false,
+      frozenTurns: 0,
+      extraRoll: false,
+    });
+  }
+  state = { players, current: 0, turnCount: 0, maxTurns: 40, over: false, gameMode: selectedGameMode, loans: [], turnPhase: 'rolling' };
+
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('rulesToggle').style.display = 'none';
+  document.getElementById('rulesBox').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+
+  buildBoardDOM();
+  renderAll();
+  beginTurn();
+}
+
+/* ==================================================
+   보드 DOM 생성 (10x10 둘레, 한 라인 10칸)
+================================================== */
+function tileGridPos(i) {
+  const n = 10;
+  if (i <= n - 1) return { row: 1, col: i + 1 };
+  if (i <= 2 * (n - 1)) return { row: i - n + 2, col: n };
+  if (i <= 3 * (n - 1)) return { row: n, col: n - (i - 2 * (n - 1)) };
+  return { row: n - (i - 3 * (n - 1)), col: 1 };
+}
+
+function buildBoardDOM() {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  BOARD.forEach((tile, i) => {
+    const pos = tileGridPos(i);
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.id = 'tile-' + i;
+    el.style.gridColumn = pos.col;
+    el.style.gridRow = pos.row;
+    if (CORNERS.includes(i)) el.classList.add('corner');
+    if (tile.group) el.classList.add(GROUP_COLORS[tile.group]);
+    if (tile.type === 'transit') el.classList.add('type-transit');
+    if (tile.type === 'tax') el.classList.add('type-tax');
+    if (tile.type === 'card') el.classList.add('type-card');
+    if (tile.type === 'start') el.classList.add('type-start');
+    if (tile.type === 'jail') el.classList.add('type-jail');
+    if (tile.type === 'travel') el.classList.add('type-travel');
+
+    let priceLabel = '';
+    if (tile.type === 'property' || tile.type === 'transit') priceLabel = `${fmt(tile.price)}`;
+    else if (tile.type === 'tax') priceLabel = `-${fmt(tile.amount)}`;
+
+    el.innerHTML = `
+      <div class="tname">${tileEmoji(tile)} ${tileDisplayName(tile)}</div>
+      ${priceLabel ? `<div class="tprice">${priceLabel}</div>` : ''}
+      <div class="tlevel" id="level-${i}"></div>
+      <div class="owner-bar" id="owner-${i}"></div>
+      <div class="tokens" id="tokens-${i}"></div>
+    `;
+    board.appendChild(el);
+  });
+
+  const centerTpl = document.getElementById('boardCenterTemplate').firstElementChild;
+  board.appendChild(centerTpl);
+}
+
+function tileEmoji(tile) {
+  switch (tile.type) {
+    case 'start': return '🏁';
+    case 'tax': return '💰';
+    case 'card': return (state && state.gameMode === 'chaos') ? '🌀' : '🎴';
+    case 'jail': return '🚔';
+    case 'travel': return '✈️';
+    case 'transit': return '🚉';
+    default: return '';
+  }
+}
+function tileDisplayName(tile) {
+  if (tile.type === 'card' && state && state.gameMode === 'chaos') return '카오스카드';
+  return tile.name;
+}
+
+/* ==================================================
+   렌더링
+================================================== */
+function renderAll() {
+  renderBoardOwnership();
+  renderTokens();
+  renderPlayerList();
+  renderBuildList();
+  renderLoanPanel();
+  renderTurnControls();
+  if (netState.mode === 'online' && netState.isHost) broadcastState();
+}
+
+function renderTurnControls() {
+  const rollBtn = document.getElementById('rollBtn');
+  const endBtn = document.getElementById('endTurnBtn');
+  const info = document.getElementById('turnInfo');
+  if (!state) return;
+  if (state.over) { rollBtn.style.display = 'none'; endBtn.style.display = 'none'; info.textContent = '게임 종료'; return; }
+  const cur = state.players[state.current];
+  const mine = isMySlot(cur.id);
+  if (cur.isAI) {
+    rollBtn.style.display = 'none';
+    endBtn.style.display = 'none';
+  } else if (state.turnPhase === 'acting') {
+    rollBtn.style.display = 'none';
+    endBtn.style.display = mine ? 'inline-block' : 'none';
+  } else {
+    rollBtn.style.display = mine ? 'inline-block' : 'none';
+    if (mine) rollBtn.disabled = rolledThisTurn;
+    endBtn.style.display = 'none';
+  }
+  info.textContent = (!cur.isAI && mine) ? `${cur.name}의 차례 (내 턴)` : `${cur.name}의 차례`;
+}
+
+function renderBoardOwnership() {
+  BOARD.forEach((tile, i) => {
+    const ownerBar = document.getElementById('owner-' + i);
+    const levelEl = document.getElementById('level-' + i);
+    if (tile.owner !== null) {
+      ownerBar.style.background = state.players[tile.owner].color;
+      levelEl.textContent = tile.level > 0 ? '🏠'.repeat(Math.min(tile.level, 3)) + (tile.level >= 4 ? '🏨' : '') : '';
+    } else {
+      ownerBar.style.background = 'transparent';
+      levelEl.textContent = '';
+    }
+  });
+}
+
+function renderTokens() {
+  BOARD.forEach((tile, i) => {
+    document.getElementById('tokens-' + i).innerHTML = '';
+  });
+  state.players.forEach(p => {
+    if (p.bankrupt) return;
+    const wrap = document.getElementById('tokens-' + p.pos);
+    const t = document.createElement('div');
+    t.className = 'token';
+    t.style.background = p.color;
+    t.title = p.name;
+    t.textContent = kitInfo(p.kit) ? kitInfo(p.kit).emoji : '';
+    wrap.appendChild(t);
+  });
+}
+
+function renderPlayerList() {
+  const wrap = document.getElementById('playerList');
+  wrap.innerHTML = '';
+  state.players.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'player-card' + (i === state.current && !p.bankrupt ? ' active' : '') + (p.bankrupt ? ' bankrupt' : '');
+    const propCount = BOARD.filter(t => t.owner === i).length;
+    const ki = kitInfo(p.kit);
+    card.title = ki ? ki.desc : '';
+    card.innerHTML = `
+      <div class="dot" style="background:${p.color}">${ki ? ki.emoji : ''}</div>
+      <div class="pinfo">
+        <b>${p.name}${p.isAI ? ' 🤖' : ''}${isMySlot(p.id) && netState.mode === 'online' ? ' (나)' : ''}</b> <span class="kit-tag">${ki ? ki.name : ''}</span><br>
+        💵 ${fmt(p.cash)} · 🏠 ${propCount}칸${p.frozenTurns > 0 ? ' · 🚔' + p.frozenTurns : ''}
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+}
+
+function renderBuildList() {
+  const wrap = document.getElementById('buildList');
+  const human = state.players[state.current];
+  if (state.over || human.isAI || human.bankrupt || !isMySlot(human.id)) {
+    wrap.innerHTML = `<div style="font-size:12px;color:#888;">${state.over ? '게임이 종료되었습니다.' : '내 턴이 아닙니다.'}</div>`;
+    return;
+  }
+  const myTiles = BOARD.filter(t => t.owner === human.id && t.type === 'property');
+  if (myTiles.length === 0) {
+    wrap.innerHTML = '<div style="font-size:12px;color:#888;">보유한 땅이 없습니다.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  myTiles.forEach(tile => {
+    const fullSet = hasFullSet(human.id, tile.group);
+    const cost = houseCost(tile);
+    const maxed = tile.level >= 4;
+    const row = document.createElement('div');
+    row.className = 'build-row';
+    row.innerHTML = `
+      <span>${tile.name} ${tile.level > 0 ? `(Lv${tile.level})` : ''} ${fullSet ? '✅세트완성' : ''}</span>
+      <button ${(!fullSet || maxed || human.cash < cost) ? 'disabled' : ''} onclick="netAction('build', {tileId: ${tile.id}})">
+        ${maxed ? '완공' : `건설 (-${fmt(cost)})`}
+      </button>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+function renderLoanPanel() {
+  const wrap = document.getElementById('loanList');
+  const human = state.players[state.current];
+  const canRequest = !state.over && !human.isAI && !human.bankrupt && isMySlot(human.id) && state.players.filter(pl => pl.id !== human.id && !pl.bankrupt).length > 0;
+  let html = canRequest ? `<button class="primary-btn" style="margin-top:0;margin-bottom:10px;" onclick="openLoanModal()">💰 대출받기 (조건 직접 작성)</button>` : '';
+
+  const myLoans = state.loans.filter(l => l.borrowerId === human.id);
+  const givenLoans = state.loans.filter(l => l.lenderId === human.id);
+
+  if (myLoans.length) {
+    html += '<div style="font-weight:bold;margin-top:4px;">내가 빌린 돈</div>';
+    myLoans.forEach(l => {
+      const lender = state.players[l.lenderId];
+      const left = l.dueTurn - state.turnCount;
+      html += `<div style="color:#c0392b;">→ ${lender.name}에게 ${fmt(l.owed)} 상환 예정 (이자 ${l.interestPct}%, ${left > 0 ? left + '턴 후' : '곧 상환'})</div>`;
+    });
+  }
+  if (givenLoans.length) {
+    html += '<div style="font-weight:bold;margin-top:4px;">내가 빌려준 돈</div>';
+    givenLoans.forEach(l => {
+      const borrower = state.players[l.borrowerId];
+      const left = l.dueTurn - state.turnCount;
+      html += `<div style="color:#14532d;">← ${borrower.name}에게서 ${fmt(l.owed)} 회수 예정 (이자 ${l.interestPct}%, ${left > 0 ? left + '턴 후' : '곧 회수'})</div>`;
+    });
+  }
+  if (!html) html = '<div style="color:#888;">대출 내역이 없습니다.</div>';
+  wrap.innerHTML = html;
+}
+
+function log(msg) {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.textContent = msg;
+  box.prepend(line);
+}
+
+/* ==================================================
+   턴 진행
+================================================== */
+function beginTurn() {
+  if (state.over) return;
+  const p = state.players[state.current];
+  rolledThisTurn = false;
+  state.turnPhase = 'rolling';
+  renderAll();
+
+  if (p.bankrupt) { nextPlayer(); return; }
+
+  processDueLoans(p);
+  if (state.over) { renderAll(); return; }
+
+  if (p.frozenTurns > 0) {
+    p.frozenTurns--;
+    log(`🚔 ${p.name}은(는) 감옥에서 대기 중입니다. (남은 턴: ${p.frozenTurns})`);
+    renderAll();
+    setTimeout(nextPlayer, 900);
+    return;
+  }
+
+  renderAll();
+
+  if (p.isAI) {
+    setTimeout(doRoll, 700);
+  }
+}
+
+function doRoll() {
+  if (rolledThisTurn || state.over) return;
+  rolledThisTurn = true;
+  const p = state.players[state.current];
+  p._stealHandled = false;
+  renderTurnControls();
+
+  const d1 = 1 + Math.floor(Math.random() * 6);
+  const d2 = 1 + Math.floor(Math.random() * 6);
+  const dice = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+  document.getElementById('diceDisplay').textContent = `${dice[d1]} ${dice[d2]}`;
+  document.getElementById('diceSum').textContent = `합계: ${d1 + d2}`;
+
+  if (p.kit === 'gambler' && d1 === d2) {
+    const bonus = 200 * MONEY_SCALE;
+    p.cash += bonus;
+    log(`🎲 ${p.name}의 도박사 능력 발동! 더블 보너스 +${fmt(bonus)}`);
+    renderPlayerList();
+  }
+
+  const steps = d1 + d2;
+  animateMove(p, steps, () => handleLanding(p));
+}
+
+function animateMove(p, steps, callback) {
+  let remaining = steps;
+  const interval = setInterval(() => {
+    const prevPos = p.pos;
+    p.pos = (p.pos + 1) % BOARD.length;
+    if (p.pos < prevPos) {
+      const passBonus = 200 * MONEY_SCALE;
+      p.cash += passBonus;
+      log(`🏁 ${p.name} 시작 지점을 통과하여 ${fmt(passBonus)}을 받았습니다.`);
+    }
+    renderTokens();
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      setTimeout(callback, 150);
+    }
+  }, 130);
+}
+
+function handleLanding(p, depth = 0) {
+  const tile = BOARD[p.pos];
+  renderPlayerList();
+
+  switch (tile.type) {
+    case 'start':
+      log(`${p.name}이(가) 시작 지점에 도착했습니다.`);
+      afterLandingResolved(p);
+      break;
+
+    case 'property':
+    case 'transit':
+      handlePropertyLanding(p, tile);
+      break;
+
+    case 'tax': {
+      let amount = tile.amount;
+      let taxNote = '';
+      if (p.kit === 'origin') { amount = 0; taxNote = ' (태초의 존재 - 세금 완전 면제)'; }
+      else if (p.kit === 'accountant') { amount = Math.round(amount * 0.5); taxNote = ' (세무사 감면 적용)'; }
+      else if (p.kit === 'dragonoid') { amount = Math.round(amount * 0.7); taxNote = ' (용기사 감면 적용)'; }
+      p.cash -= amount;
+      log(`💰 ${p.name} 세금 ${fmt(amount)} 납부${taxNote}.`);
+      checkBankrupt(p);
+      afterLandingResolved(p);
+      break;
+    }
+
+    case 'card': {
+      const pool = state.gameMode === 'chaos' ? CHAOS_CARD_EVENTS : CARD_EVENTS;
+      const event = pool[Math.floor(Math.random() * pool.length)];
+      const beforeCash = p.cash;
+      p._chaosLog = null;
+      p._forceEndGame = false;
+      event.fn(p, state.players);
+      log(`${state.gameMode === 'chaos' ? '🌀' : '🎴'} ${p.name}: ${event.text}`);
+      if (p._chaosLog) { log(p._chaosLog); p._chaosLog = null; }
+      const cardDelta = p.cash - beforeCash;
+      if (cardDelta !== 0) log(`　→ 현금 변동: ${cardDelta > 0 ? '+' : ''}${fmt(cardDelta)}`);
+      if (p.kit === 'lucky' || p.kit === 'archmage') {
+        const delta = p.cash - beforeCash;
+        if (delta < 0) {
+          const refund = p.kit === 'archmage' ? Math.round(-delta) : Math.round(-delta / 2);
+          p.cash += refund;
+          log(p.kit === 'archmage'
+            ? `🧙 ${p.name}의 대마법사 능력으로 나쁜 효과가 완전히 무효화되었습니다. (+${fmt(refund)})`
+            : `🍀 ${p.name}의 행운아 능력으로 손실이 절반 줄었습니다. (+${fmt(refund)})`);
+        }
+      }
+      checkBankrupt(p);
+      if (state.over) break;
+      if (p._forceEndGame) {
+        p._forceEndGame = false;
+        const survivors = state.players.filter(x => !x.bankrupt);
+        const winner = survivors.length ? [...survivors].sort((a, b) => netWorth(b) - netWorth(a))[0] : null;
+        endGame(`🃏 ${p.name}이(가) 판을 뒤엎어버렸습니다! 그 순간 자산 기준 ${winner ? winner.name + ' 승리!' : '무승부'}`, winner);
+        break;
+      }
+      if (!state.over && p.extraRoll) {
+        p.extraRoll = false;
+        log(`🔁 ${p.name}, 한 번 더 턴을 진행합니다!`);
+        renderAll();
+        setTimeout(beginTurn, 700);
+      } else {
+        afterLandingResolved(p);
+      }
+      break;
+    }
+
+    case 'jail': {
+      const sentence = (p.kit === 'thief' || p.kit === 'shadowlord') ? 5 : 3;
+      p.frozenTurns = sentence - 1;
+      log(`🚔 ${p.name}이(가) 감옥에 도착! ${sentence}턴 동안 갇힙니다.`);
+      afterLandingResolved(p);
+      break;
+    }
+
+    case 'travel': {
+      if (depth < 1) {
+        if (!p.isAI) {
+          window._pendingTravel = { p, depth };
+          const actions = BOARD.map(t => ({ label: t.name, value: String(t.id) }));
+          requestDecision(p.id, 'travelPick', { title: '🧳 세계여행', message: '이동할 칸을 선택하세요.', actions });
+        } else {
+          let target;
+          if (p.kit === 'traveler') {
+            const candidates = BOARD.filter(t => t.owner === null && (t.type === 'property' || t.type === 'transit'));
+            target = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)].id : Math.floor(Math.random() * BOARD.length);
+          } else {
+            target = Math.floor(Math.random() * BOARD.length);
+          }
+          p.pos = target;
+          log(`✈️ ${p.name} 세계여행! ${BOARD[target].name}(으)로 이동합니다.`);
+          renderTokens();
+          setTimeout(() => handleLanding(p, depth + 1), 400);
+        }
+      } else {
+        afterLandingResolved(p);
+      }
+      break;
+    }
+  }
+}
+
+function handlePropertyLanding(p, tile) {
+  if (tile.owner === null) {
+    if (p.isAI) {
+      const decision = aiDecideBuy(p, tile);
+      if (decision) buyTile(p, tile);
+      else log(`${p.name}은(는) ${tile.name} 구매를 포기했습니다.`);
+      afterLandingResolved(p);
+    } else {
+      window._pendingBuy = { p, tile };
+      const packet = {
+        title: tile.name,
+        message: `이 땅을 <b>${fmt(tile.price)}</b>에 구매하시겠습니까?<br>내 현금: ${fmt(p.cash)}`,
+        actions: [{ label: '패스', value: 'no' }, { label: '구매', value: 'yes', primary: true, disabled: p.cash < tile.price }],
+      };
+      requestDecision(p.id, 'buy', packet);
+    }
+  } else if (tile.owner === p.id) {
+    log(`${p.name}은(는) 자신의 땅 ${tile.name}에 도착했습니다.`);
+    afterLandingResolved(p);
+  } else {
+    const owner = state.players[tile.owner];
+    let fullRent = computeRent(tile);
+    if (owner.kit === 'tycoon') fullRent = Math.round(fullRent * 1.2);
+
+    if (!p.isAI) {
+      window._rentContext = { p, tile, owner, fullRent };
+      const packet = {
+        title: `${tile.name} - ${owner.name}의 땅`,
+        message: `통행료: <b>${fmt(fullRent)}</b><br>내 현금: ${fmt(p.cash)}`,
+        actions: [
+          { label: `전액 지불 (${fmt(fullRent)})`, value: 'pay', primary: true },
+          { label: '🤝 흥정 제안하기', value: 'negotiate' },
+          { label: '🏠 이 땅 구매 제안하기', value: 'purchase' },
+        ],
+      };
+      requestDecision(p.id, 'rentChoice', packet);
+    } else if (!owner.isAI) {
+      const offer = Math.round(fullRent * (0.5 + Math.random() * 0.3));
+      window._pendingAIOffer = { p, tile, owner, fullRent, offer };
+      const packet = {
+        title: '🤝 AI의 흥정 제안',
+        message: `${p.name}(AI)이(가) ${tile.name} 통행료로 <b>${fmt(offer)}</b>만 내겠다고 제안합니다.<br>원래 통행료는 ${fmt(fullRent)}입니다.`,
+        actions: [{ label: '거절 (전액 요구)', value: 'reject' }, { label: '수락', value: 'accept', primary: true }],
+      };
+      requestDecision(owner.id, 'aiRentOfferApproval', packet);
+    } else {
+      log(`💸 ${p.name}이(가) ${owner.name}의 ${tile.name}에 도착!`);
+      payFullRent(p, tile, owner, fullRent);
+      afterLandingResolved(p);
+    }
+  }
+}
+
+function afterLandingResolved(p) {
+  if (!state.over && (p.kit === 'thief' || p.kit === 'shadowlord') && !p._stealHandled) {
+    const victims = state.players.filter(o => o !== p && !o.bankrupt && o.pos === p.pos);
+    if (victims.length) {
+      p._stealHandled = true;
+      const victim = victims[0];
+      if (p.isAI) { aiRunSteal(p, victim); } else { startStealEncounter(p, victim); }
+      return;
+    }
+  }
+  if (state.over) { renderAll(); return; }
+  state.turnPhase = 'acting';
+  renderAll();
+  if (state.over) return;
+  if (p.isAI) {
+    setTimeout(() => aiConsiderBuilding(p), 500);
+  }
+}
+
+/* ==================================================
+   구매 / 통행료 / 건설 로직
+================================================== */
+function startCashFor(kit) {
+  if (kit === 'origin') return 150000000;
+  if (kit === 'emperor') return 100000000;
+  if (kit === 'heir') return 60000000;
+  return 50000000;
+}
+function payerRentMultiplier(payer) {
+  if (payer.kit === 'origin') return 0.7;
+  if (payer.kit === 'emperor') return 0.8;
+  return 1;
+}
+
+function computeRent(tile) {
+  if (tile.type === 'transit') {
+    const count = BOARD.filter(t => t.type === 'transit' && t.owner === tile.owner).length;
+    return TRANSIT_RENT[count];
+  }
+  const owner = tile.owner !== null ? state.players[tile.owner] : null;
+  const setMultiplier = (owner && (owner.kit === 'conqueror' || owner.kit === 'origin')) ? 3 : 2;
+  if (tile.level > 0) return tile.rent * RENT_MULT[tile.level];
+  return hasFullSet(tile.owner, tile.group) ? tile.rent * setMultiplier : tile.rent;
+}
+
+function hasFullSet(playerId, group) {
+  if (!group) return false;
+  return BOARD.filter(t => t.group === group).every(t => t.owner === playerId);
+}
+
+function houseCost(tile) {
+  let cost = Math.round(tile.price * 0.5);
+  if (tile.owner !== null) {
+    const owner = state.players[tile.owner];
+    if (owner) {
+      if (owner.kit === 'architect') cost = Math.round(cost * 0.7);
+      else if (owner.kit === 'dragonoid' || owner.kit === 'origin') cost = Math.round(cost * 0.5);
+    }
+  }
+  return cost;
+}
+
+function buyTile(p, tile) {
+  p.cash -= tile.price;
+  tile.owner = p.id;
+  log(`🏠 ${p.name}이(가) ${tile.name}을(를) ${fmt(tile.price)}에 구매했습니다.`);
+}
+
+function buildHouse(tileId) {
+  const tile = BOARD[tileId];
+  const p = state.players[state.current];
+  if (tile.owner !== p.id || p.isAI) return;
+  if (!hasFullSet(p.id, tile.group) || tile.level >= 4) return;
+  const cost = houseCost(tile);
+  if (p.cash < cost) return;
+  p.cash -= cost;
+  tile.level++;
+  log(`🏗️ ${p.name}이(가) ${tile.name}에 건물을 지었습니다. (Lv${tile.level})`);
+  renderAll();
+}
+
+function aiDecideBuy(p, tile) {
+  return p.cash - tile.price > 150 * MONEY_SCALE && Math.random() < 0.85;
+}
+
+function aiConsiderBuilding(p) {
+  const myGroups = [...new Set(BOARD.filter(t => t.owner === p.id && t.group).map(t => t.group))];
+  myGroups.forEach(g => {
+    if (!hasFullSet(p.id, g)) return;
+    BOARD.filter(t => t.group === g && t.owner === p.id).forEach(tile => {
+      const cost = houseCost(tile);
+      if (tile.level < 4 && p.cash - cost > 250 * MONEY_SCALE) {
+        p.cash -= cost;
+        tile.level++;
+        log(`🏗️ ${p.name}이(가) ${tile.name}에 건물을 지었습니다. (Lv${tile.level})`);
+      }
+    });
+  });
+  renderAll();
+  setTimeout(nextPlayer, 700);
+}
+
+/* ==================================================
+   통행료 흥정 / 부동산 매매
+================================================== */
+function payFullRent(p, tile, owner, fullRent) {
+  const mult = payerRentMultiplier(p);
+  const payAmt = Math.round(fullRent * mult);
+  p.cash -= payAmt;
+  owner.cash += payAmt;
+  log(`💸 ${p.name}이(가) ${owner.name}에게 통행료 ${fmt(payAmt)}을 전액 지불했습니다.${mult < 1 ? ' (킷 할인 적용)' : ''}`);
+  checkBankrupt(p);
+}
+
+function aiDecideNegotiation(offerRatio) {
+  if (offerRatio >= 0.8) return true;
+  if (offerRatio >= 0.5) return Math.random() < 0.5;
+  return Math.random() < 0.1;
+}
+
+function sendNegotiationOffer(offerAmount) {
+  const { p, tile, owner, fullRent } = window._rentContext;
+  if (owner.isAI) {
+    const accepted = aiDecideNegotiation(offerAmount / fullRent);
+    finishNegotiation(p, tile, owner, fullRent, offerAmount, accepted);
+  } else {
+    window._pendingNegotiation = { p, tile, owner, fullRent, offerAmount };
+    const packet = {
+      title: '🤝 흥정 제안 도착',
+      message: `${p.name}이(가) 통행료로 <b>${fmt(offerAmount)}</b>만 내겠다고 제안합니다.<br>원래 통행료는 ${fmt(fullRent)}입니다.`,
+      actions: [{ label: '거절 (전액 요구)', value: 'reject' }, { label: '수락', value: 'accept', primary: true }],
+    };
+    requestDecision(owner.id, 'negotiationApproval', packet);
+  }
+}
+
+function finishNegotiation(p, tile, owner, fullRent, offerAmount, accepted) {
+  if (accepted) {
+    p.cash -= offerAmount;
+    owner.cash += offerAmount;
+    log(`🤝 흥정 성공! ${p.name}이(가) ${owner.name}에게 ${fmt(offerAmount)}만 지불했습니다. (원래 ${fmt(fullRent)})`);
+  } else {
+    log(`❌ 흥정 실패.`);
+    payFullRent(p, tile, owner, fullRent);
+  }
+  checkBankrupt(p);
+  afterLandingResolved(p);
+}
+
+function aiDecideSell(basePrice, offerPrice) {
+  return offerPrice >= basePrice * 1.3;
+}
+
+function sendPurchaseOffer(price) {
+  const { p, tile, owner, fullRent } = window._rentContext;
+  const basePrice = tile.price + tile.level * houseCost(tile);
+  if (owner.isAI) {
+    const accepted = aiDecideSell(basePrice, price);
+    finishPurchase(p, tile, owner, fullRent, price, accepted);
+  } else {
+    window._pendingPurchase = { p, tile, owner, fullRent, price };
+    const packet = {
+      title: '🏠 땅 구매 제안 도착',
+      message: `${p.name}이(가) <b>${tile.name}</b>을(를) <b>${fmt(price)}</b>에 사겠다고 제안합니다.<br>(기준가 ${fmt(basePrice)})`,
+      actions: [{ label: '거절', value: 'reject' }, { label: '수락하고 판매', value: 'accept', primary: true }],
+    };
+    requestDecision(owner.id, 'purchaseApproval', packet);
+  }
+}
+
+function finishPurchase(p, tile, owner, fullRent, price, accepted) {
+  if (accepted) {
+    p.cash -= price;
+    owner.cash += price;
+    tile.owner = p.id;
+    log(`🏠 거래 성사! ${owner.name}이(가) ${tile.name}을(를) ${fmt(price)}에 ${p.name}에게 팔았습니다.`);
+    checkBankrupt(p);
+  } else {
+    log(`❌ ${owner.name}이(가) 판매를 거절했습니다.`);
+    payFullRent(p, tile, owner, fullRent);
+  }
+  afterLandingResolved(p);
+}
+
+/* ==================================================
+   도둑 킷 - 돈 훔치기 미니게임
+================================================== */
+function sendToJail(p) {
+  const sentence = (p.kit === 'thief' || p.kit === 'shadowlord') ? 5 : 3;
+  p.pos = JAIL_TILE;
+  p.frozenTurns = sentence - 1;
+  log(`👮 ${p.name}이(가) 감옥에 이송되어 ${sentence}턴 동안 갇힙니다.`);
+  renderTokens();
+}
+
+function stealParams(kit) {
+  if (kit === 'shadowlord') return { successRate: 0.9, capRatio: 0.5, jailOnFail: false };
+  return { successRate: 0.65, capRatio: 0.3, jailOnFail: true };
+}
+
+function startStealEncounter(thief, victim) {
+  window._stealContext = { thief, victim, victimStartCash: victim.cash, stolenTotal: 0, params: stealParams(thief.kit) };
+  promptStealChoice();
+}
+
+function promptStealChoice() {
+  const ctx = window._stealContext;
+  const cap = Math.floor(ctx.victimStartCash * ctx.params.capRatio);
+  const remaining = cap - ctx.stolenTotal;
+  const failNote = ctx.params.jailOnFail ? '실패하면 훔친 돈을 모두 돌려주고 감옥에 갑니다.' : '실패해도 감옥에 가지 않고 훔친 돈만 돌려줍니다.';
+  const packet = {
+    title: '🦹 도둑질 미니게임',
+    message: `${ctx.victim.name}에게서 지금까지 ${fmt(ctx.stolenTotal)} 훔쳤습니다. (최대 ${fmt(cap)}까지, 성공률 ${Math.round(ctx.params.successRate * 100)}%)<br>${failNote}`,
+    actions: [
+      { label: '그만하고 챙기기', value: 'stop' },
+      { label: '훔치기 시도', value: 'attempt', primary: true, disabled: remaining <= 0 },
+    ],
+  };
+  requestDecision(ctx.thief.id, 'stealChoice', packet);
+}
+
+function attemptSteal() {
+  const ctx = window._stealContext;
+  const cap = Math.floor(ctx.victimStartCash * ctx.params.capRatio);
+  const remaining = cap - ctx.stolenTotal;
+  if (remaining <= 0) { stopStealing(); return; }
+  const success = Math.random() < ctx.params.successRate;
+  if (success) {
+    let amount = Math.round(ctx.victimStartCash * (0.08 + Math.random() * 0.07));
+    amount = Math.min(amount, remaining);
+    ctx.victim.cash -= amount;
+    ctx.thief.cash += amount;
+    ctx.stolenTotal += amount;
+    log(`🦹 ${ctx.thief.name}이(가) ${ctx.victim.name}에게서 ${fmt(amount)}을 훔쳤습니다! (누적 ${fmt(ctx.stolenTotal)})`);
+    checkBankrupt(ctx.victim);
+    renderAll();
+    if (!state.over) promptStealChoice();
+    else afterLandingResolved(ctx.thief);
+  } else {
+    ctx.thief.cash -= ctx.stolenTotal;
+    ctx.victim.cash += ctx.stolenTotal;
+    if (ctx.params.jailOnFail) {
+      log(`🚨 ${ctx.thief.name}의 도둑질이 들통났습니다! 훔친 돈 ${fmt(ctx.stolenTotal)}을 모두 돌려주고 감옥에 갇힙니다.`);
+      sendToJail(ctx.thief);
+    } else {
+      log(`🌙 ${ctx.thief.name}의 도둑질이 들통났지만 그림자군주 능력으로 감옥에 가지 않고 훔친 돈 ${fmt(ctx.stolenTotal)}만 돌려줬습니다.`);
+    }
+    afterLandingResolved(ctx.thief);
+  }
+}
+
+function stopStealing() {
+  const ctx = window._stealContext;
+  if (ctx.stolenTotal > 0) log(`🦹 ${ctx.thief.name}이(가) 훔친 돈 ${fmt(ctx.stolenTotal)}을 챙기고 도망쳤습니다.`);
+  afterLandingResolved(ctx.thief);
+}
+
+function aiRunSteal(thief, victim) {
+  const victimStartCash = victim.cash;
+  const params = stealParams(thief.kit);
+  const cap = Math.floor(victimStartCash * params.capRatio);
+  let stolen = 0, caught = false;
+  while (stolen < cap && Math.random() < 0.6) {
+    if (Math.random() < params.successRate) {
+      let amount = Math.round(victimStartCash * (0.08 + Math.random() * 0.07));
+      amount = Math.min(amount, cap - stolen);
+      victim.cash -= amount; thief.cash += amount; stolen += amount;
+    } else { caught = true; break; }
+  }
+  if (caught) {
+    thief.cash -= stolen; victim.cash += stolen;
+    if (params.jailOnFail) {
+      log(`🚨 ${thief.name}(AI)의 도둑질이 들통났습니다! 훔친 돈 ${fmt(stolen)}을 모두 돌려주고 감옥에 갇힙니다.`);
+      sendToJail(thief);
+    } else {
+      log(`🌙 ${thief.name}(AI)의 도둑질이 들통났지만 그림자군주 능력으로 감옥에 가지 않고 훔친 돈을 돌려줬습니다.`);
+    }
+  } else if (stolen > 0) {
+    log(`🦹 ${thief.name}(AI)이(가) ${victim.name}에게서 ${fmt(stolen)}을 훔쳐 도망쳤습니다.`);
+  }
+  checkBankrupt(victim);
+  afterLandingResolved(thief);
+}
+
+/* ==================================================
+   대출 (다른 플레이어에게 이자 붙여 빌리기)
+================================================== */
+function processDueLoans(p) {
+  const due = state.loans.filter(l => l.borrowerId === p.id && l.dueTurn <= state.turnCount);
+  for (const loan of due) {
+    const lender = state.players[loan.lenderId];
+    if (p.cash >= loan.owed) {
+      p.cash -= loan.owed;
+      if (!lender.bankrupt) lender.cash += loan.owed;
+      log(`💳 ${p.name}이(가) ${lender.name}에게 대출금 ${fmt(loan.owed)}을 상환했습니다.`);
+    } else {
+      const paid = Math.max(p.cash, 0);
+      p.cash -= paid;
+      if (!lender.bankrupt) lender.cash += paid;
+      log(`⚠️ ${p.name}이(가) 대출금을 전액 상환하지 못해 ${fmt(paid)}만 지불했습니다!`);
+      checkBankrupt(p);
+    }
+    if (state.over) break;
+  }
+  state.loans = state.loans.filter(l => !(l.borrowerId === p.id && l.dueTurn <= state.turnCount));
+}
+
+function aiDecideLoan(lender, borrower, amount, term, interest) {
+  if (lender.cash - amount < 200 * MONEY_SCALE) return false;
+  if (amount <= 0) return false;
+  let score = 0.35;
+  score += Math.min(interest, 100) / 150;
+  score -= Math.max(0, term - 5) * 0.03;
+  score -= (amount / Math.max(lender.cash, 1)) * 0.6;
+  score = Math.max(0.05, Math.min(0.95, score));
+  return Math.random() < score;
+}
+
+function grantLoan(borrower, lender, amount, term, interest) {
+  const owed = Math.round(amount * (1 + interest / 100));
+  state.loans.push({ id: loanIdCounter++, borrowerId: borrower.id, lenderId: lender.id, principal: amount, owed, interestPct: interest, dueTurn: state.turnCount + term });
+  borrower.cash += amount;
+  lender.cash -= amount;
+}
+
+function openLoanModal() {
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  const borrower = state.players[state.current];
+  const lenders = state.players.filter(pl => pl.id !== borrower.id && !pl.bankrupt);
+  const btns = lenders.map(l => `<button class="travel-option" onclick="pickLoanLender(${l.id})">${l.name}${l.isAI ? ' 🤖' : ''} (💵${fmt(l.cash)})</button>`).join('');
+  box.innerHTML = `
+    <h3>💰 대출받기</h3>
+    <p>누구에게 대출을 받으시겠습니까?</p>
+    <div class="travel-grid" style="grid-template-columns:repeat(2,1fr);">${btns}</div>
+    <div class="modal-btns"><button class="btn-no" onclick="closeModal()">취소</button></div>
+  `;
+  overlay.style.display = 'flex';
+}
+
+function pickLoanLender(lenderId) {
+  window._loanLenderId = lenderId;
+  const box = document.getElementById('modalBox');
+  const lender = state.players[lenderId];
+  box.innerHTML = `
+    <h3>💰 대출 조건 작성</h3>
+    <p>${lender.name}${lender.isAI ? ' 🤖' : ''}에게 제안할 조건을 직접 입력하세요. (${lender.name}의 현금: ${fmt(lender.cash)})</p>
+    <div style="text-align:left;font-size:13px;margin-top:8px;">
+      <label>대출 금액</label>
+      <input id="loanAmountInput" class="modal-input" type="number" min="1" value="10000000">
+      <label>상환 기간 (턴)</label>
+      <input id="loanTermInput" class="modal-input" type="number" min="1" value="5">
+      <label>이자율 (%)</label>
+      <input id="loanInterestInput" class="modal-input" type="number" min="0" value="20">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-no" onclick="closeModal()">취소</button>
+      <button class="btn-yes" onclick="submitLoanRequest()">제안 보내기</button>
+    </div>
+  `;
+}
+
+function submitLoanRequest() {
+  const amount = Math.max(1, Math.round(Number(document.getElementById('loanAmountInput').value) || 0));
+  const term = Math.max(1, Math.round(Number(document.getElementById('loanTermInput').value) || 0));
+  const interest = Math.max(0, Math.round(Number(document.getElementById('loanInterestInput').value) || 0));
+  const lenderId = window._loanLenderId;
+  closeModal();
+  netAction('submitLoan', { borrowerId: state.current, lenderId, amount, term, interest });
+}
+
+function processLoanRequest(borrowerId, lenderId, amount, term, interest) {
+  const borrower = state.players[borrowerId];
+  const lender = state.players[lenderId];
+  if (!borrower || !lender) return;
+  if (lender.isAI) {
+    if (aiDecideLoan(lender, borrower, amount, term, interest)) {
+      grantLoan(borrower, lender, amount, term, interest);
+      log(`💰 ${lender.name}이(가) ${borrower.name}에게 ${fmt(amount)}을 대출해줬습니다. (이자 ${interest}%, ${term}턴 후 ${fmt(Math.round(amount * (1 + interest / 100)))} 상환)`);
+    } else {
+      log(`${lender.name}이(가) 대출 조건을 거절했습니다.`);
+    }
+    renderAll();
+  } else {
+    window._pendingLoan = { borrower, lender, amount, term, interest };
+    const owed = Math.round(amount * (1 + interest / 100));
+    const packet = {
+      title: '💰 대출 계약 제안',
+      message: `${borrower.name}이(가) 아래 조건으로 대출을 요청합니다.<br><br>💵 대출금: ${fmt(amount)}<br>📅 상환 기한: ${term}턴 후<br>📈 이자율: ${interest}%<br>💰 상환액: ${fmt(owed)}`,
+      actions: [{ label: '거절', value: 'reject' }, { label: '계약 체결', value: 'accept', primary: true, disabled: lender.cash < amount }],
+    };
+    requestDecision(lender.id, 'loanApproval', packet);
+  }
+}
+
+/* ==================================================
+   파산 / 턴 종료 / 승리 판정
+================================================== */
+function checkBankrupt(p) {
+  if (p.cash < 0 && !p.bankrupt) {
+    p.bankrupt = true;
+    BOARD.forEach(t => { if (t.owner === p.id) { t.owner = null; t.level = 0; } });
+    log(`💀 ${p.name}이(가) 파산했습니다!`);
+    const alive = state.players.filter(x => !x.bankrupt);
+    if (alive.length <= 1) {
+      endGame(alive.length === 1 ? `${alive[0].name} 승리! (최후의 생존자)` : '모두 파산했습니다.', alive.length === 1 ? alive[0] : null);
+    }
+  }
+}
+
+function endTurn() {
+  if (state.over) return;
+  nextPlayer();
+}
+
+function nextPlayer() {
+  if (state.over) return;
+  const alive = state.players.filter(x => !x.bankrupt);
+  if (alive.length <= 1) {
+    endGame(alive.length === 1 ? `${alive[0].name} 승리! (최후의 생존자)` : '무승부', alive.length === 1 ? alive[0] : null);
+    return;
+  }
+  let next = (state.current + 1) % state.players.length;
+  while (state.players[next].bankrupt) next = (next + 1) % state.players.length;
+  if (next <= state.current) {
+    state.turnCount++;
+    if (state.turnCount >= state.maxTurns) {
+      const winner = [...state.players].filter(x => !x.bankrupt).sort((a, b) => netWorth(b) - netWorth(a))[0];
+      endGame(`${state.maxTurns}턴 종료! 최고 자산 ${winner.name} 승리! (자산 ${fmt(netWorth(winner))})`, winner);
+      return;
+    }
+  }
+  state.current = next;
+  beginTurn();
+}
+
+function netWorth(p) {
+  let value = p.cash;
+  BOARD.forEach(t => { if (t.owner === p.id) value += t.price + t.level * houseCost(t); });
+  return value;
+}
+
+async function endGame(message, winner) {
+  state.over = true;
+  renderAll();
+
+  let coinMsg = '';
+  if (currentAccount && !currentAccount.isGuest && (netState.mode !== 'online' || netState.mySlot === 0)) {
+    const me = state.players[isMySlot(0) ? 0 : netState.mySlot];
+    if (me && !me.bankrupt) {
+      const worth = netWorth(me);
+      let earned = Math.floor(worth / (50 * MONEY_SCALE));
+      if (winner === me) earned += 100;
+      currentAccount.coins += earned;
+      await saveAccount();
+      coinMsg = `<p>💰 코인 ${earned} 획득! (보유 코인: ${currentAccount.coins})</p>`;
+    } else if (me) {
+      coinMsg = `<p style="color:#888;font-size:12.5px;">파산하여 이번 게임의 코인 보상은 없습니다.</p>`;
+    }
+  }
+
+  const overlay = document.getElementById('modalOverlay');
+  const box = document.getElementById('modalBox');
+  box.innerHTML = `
+    <h3>🏆 게임 종료</h3>
+    <p>${message}</p>
+    ${coinMsg}
+    <div class="modal-btns">
+      <button class="btn-yes" onclick="backToLobbyFromGame()">🏠 로비로 돌아가기</button>
+    </div>
+  `;
+  overlay.style.display = 'flex';
+}
+
+function backToLobbyFromGame() {
+  document.getElementById('modalOverlay').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('lobbyScreen').style.display = 'block';
+  netState.mode = null; netState.isHost = false; netState.mySlot = null;
+  if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+  renderLobby();
+}
+</script>
+</body>
+</html>
